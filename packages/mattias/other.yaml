@@ -1,0 +1,28 @@
+# timer:
+
+input_boolean:
+  
+  gs_hui_jia_mo_shi:
+    name: At Home
+    icon: custom:lock
+  
+  gs_chi_jia_mo_shi:
+    name: Not At Home
+    icon: custom:lock
+  
+  gs_shui_mian_mo_shi:
+    name: Sleep
+    icon: custom:lock
+
+  gs_an_fang_mo_shi:
+    name: Security-1
+    icon: custom:lock
+
+  gs_an_fang_mo_shi_2:
+    name: Security-2
+    icon: custom:lock
+
+  gs_an_fang_mo_shi_3:
+    name: Security-3
+    icon: custom:lock
+  

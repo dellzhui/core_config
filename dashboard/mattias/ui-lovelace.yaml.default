@@ -1,0 +1,255 @@
+button_card_templates: !include button_card_templates.yaml
+
+views:
+  
+  - type: custom:grid-layout
+    path: home
+    layout:
+      #default
+      grid-gap: var(--custom-layout-card-padding)
+      grid-template-columns: repeat(4, 1fr) 0
+      grid-template-rows: 0 repeat(2 fit-content(100%)) 0fr
+      grid-template-areas: |
+        "sidebar  light-switch   ac         temperature  ."
+        "sidebar  automation     my-family  sensor       ."
+        "sidebar  footer         footer     footer       ."
+      mediaquery:
+        #phone
+        "(max-width: 800px)":
+          grid-gap: calc(var(--custom-layout-card-padding) * 1.7)
+          grid-template-columns: 0 repeat(2, 1fr) 0
+          grid-template-rows: 0 repeat(5, fit-content(100%)) 0fr
+          grid-template-areas: |
+            ".  .            .                ."
+            ".  sidebar      sidebar          ."
+            ".  ac           light-switch     ."
+            ".  temperature  my-family        ."
+            ".  automation   sensor           ."
+            ".  footer       footer           ."
+            ".  .            .                ."
+        #portrait
+        "(max-width: 1200px)":
+          grid-gap: var(--custom-layout-card-padding)
+          grid-template-columns: repeat(3, 1fr) 0
+          grid-template-rows: 0 repeat(4, fit-content(100%)) 0fr
+          grid-template-areas: |
+            "sidebar  .             .            ."
+            "sidebar  light-switch  temperature  ."
+            "sidebar  ac            my-family    ."
+            "sidebar  automation    sensor       ."
+            "sidebar  footer        footer       ."
+            "sidebar  .             .            ."
+      carhtml: 
+    cards:
+
+      - type: custom:button-card #extra_styles fix
+        styles: {card: [display: none]}
+
+
+      #################################################
+      #                                               #
+      #                    SIDEBAR                    #
+      #                                               #
+      #################################################
+
+      - type: vertical-stack
+        view_layout:
+          grid-area: sidebar
+        cards:
+          - type: custom:button-card
+            entity: sensor.template_sidebar
+            template: sidebar_template
+          - type: custom:clock-weather-card
+            entity: weather.forecast_home
+            tap_action:
+              action: none
+            hold_action:
+              action: none
+
+
+      #################################################
+      #                                               #
+      #                  Light                         #
+      #                                               #
+      #################################################
+
+      - type: grid
+        title: Light & Switch
+        view_layout:
+          grid-area: light-switch
+        columns: 1
+        cards:
+          - type: custom:swipe-card
+            start_card: 1
+            parameters:
+              roundLengths: true
+              effect: coverflow
+              speed: 650
+              spaceBetween: 20
+              threshold: 7
+              edgeSwipeThreshold: 20
+              coverflowEffect:
+                rotate: 80
+                depth: 300
+            cards:
+
+              - type: grid
+                columns: 2
+                cards:
+
+                  - type: "custom:auto-entities"
+                    card:
+                      type: "grid"
+                      columns: 2
+                      square: false
+                    card_param: "cards"
+                    sort:
+                      count: 4
+                    filter:
+                      include:
+                        - domain: "gs_empty"
+                          options:
+                            type: "custom:button-card"
+
+
+      #################################################
+      #                                               #
+      #                    AC                         #
+      #                                               #
+      #################################################
+
+      - type: grid
+        title: AC
+        view_layout:
+          grid-area: ac
+        columns: 1
+        cards:
+
+          - type: "custom:auto-entities"
+            card:
+              type: "grid"
+              columns: 2
+              square: false
+            card_param: "cards"
+            sort:
+              count: 4
+            filter:
+              include:
+                - domain: "gs_empty"
+                  options:
+                    type: "custom:button-card"
+
+      
+      #################################################
+      #                                               #
+      #                    Thermometer                #
+      #                                               #
+      #################################################
+
+      - type: grid
+        title: Thermometer
+        view_layout:
+          grid-area: temperature
+        columns: 2
+        cards:
+
+          - type: "custom:auto-entities"
+            card:
+              type: "grid"
+              columns: 2
+              square: false
+            card_param: "cards"
+            sort:
+              count: 4
+            filter:
+              include:
+                - domain: "gs_empty"
+                  options:
+                    type: "custom:button-card"
+
+
+      #################################################
+      #                                               #
+      #                     Automation                #
+      #                                               #
+      #################################################
+
+      - type: grid
+        title: Automation
+        view_layout:
+          grid-area: automation
+        columns: 1
+        cards:
+
+          - type: "custom:auto-entities"
+            card:
+              type: "grid"
+              columns: 2
+              square: false
+            card_param: "cards"
+            sort:
+              count: 4
+            filter:
+              include:
+                - domain: "gs_empty"
+                  options:
+                    type: "custom:button-card"
+
+
+      #################################################
+      #                                               #
+      #                    my-family                  #
+      #                                               #
+      #################################################
+
+      
+      - type: grid
+        title: Family
+        view_layout:
+          grid-area: my-family
+        columns: 1
+        cards:
+          - type: "custom:auto-entities"
+            card:
+              type: "grid"
+              columns: 2
+              square: false
+            card_param: "cards"
+            sort:
+              count: 4
+            filter:
+              include:
+                - domain: "person"
+                  options:
+                    type: "custom:button-card"
+                    template: person
+                    tap_action:
+                      action: none
+
+      
+      #################################################
+      #                                               #
+      #                     Sensor                    #
+      #                                               #
+      #################################################
+
+      - type: grid
+        title: Sensor
+        view_layout:
+          grid-area: sensor
+        columns: 2
+        cards:
+
+          - type: "custom:auto-entities"
+            card:
+              type: "grid"
+              columns: 2
+              square: false
+            card_param: "cards"
+            sort:
+              count: 4
+            filter:
+              include:
+                - domain: "gs_empty"
+                  options:
+                    type: "custom:button-card"

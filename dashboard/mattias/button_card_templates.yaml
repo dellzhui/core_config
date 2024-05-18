@@ -1,0 +1,3386 @@
+  # !toggle word-wrap
+
+  #################################################
+  #                                               #
+  #                   SETTINGS                    #
+  #                                               #
+  #################################################
+
+  settings:
+    variables:
+      entity_tablet: switch.galaxy_tab_a_screensaver
+      entity_browser_mod: media_player.browser_dd239c79_406b9d77
+      translate_unknown: unknown
+      translate_idle: idle
+      translate_home: At home
+      translate_not_home: Not at home
+      translate_available: Available
+      translate_no_updates: No updates
+      translate_update_available: Update available
+      translate_updates_available: Updates available
+
+  gs_tap_text:
+    variables:
+      tip_content: "The device is not yet bound, please bind the device on the gateway first. The device name is "
+  
+                
+  #################################################
+  #                                               #
+  #                     BASE                      #
+  #                                               #
+  #################################################
+
+  
+      
+  base:
+    template:
+      - settings
+      - tilt
+      - extra_styles
+    variables:
+      state_on: >
+        [[[ return ['on', 'open', 'auto', 'heat', 'cool', 'fan_only', 'dry', 'home', 'playing'].indexOf(entity === undefined || entity.state) !== -1; ]]]
+      state: >
+        [[[ return entity === undefined || entity.state; ]]]
+      entity_id: >
+        [[[ return entity === undefined || entity.entity_id; ]]]
+      media_on: >
+        [[[ return entity === undefined || ['playing', 'paused'].indexOf(entity.state) !== -1; ]]]
+      media_off: >
+        [[[ return entity === undefined || ['off', 'idle', 'standby', 'unknown', 'unavailable'].indexOf(entity.state) !== -1; ]]]
+      entity_picture: >
+        [[[ return entity === undefined || entity.attributes.entity_picture; ]]]
+      timeout: >
+        [[[ return entity === undefined || Date.now() - Date.parse(entity.last_changed); ]]]
+      tilt_options: >
+        [[[
+          let options = {
+            max: 5,
+            glare: true,
+            'max-glare': 0.15,
+            perspective: 800,
+            speed: 800,
+            parallax: '25px'
+          }
+          if (this._config.template.includes('conditional_media')) {
+            options.scale = options.scale % parseInt(options.scale) / 2 + parseInt(options.scale);
+            options.perspective = options.perspective * 2;
+            return options;
+          }
+          return options;
+        ]]]
+      gs_domain: >
+        [[[
+          if(entity && entity.entity_id) {
+            return entity.entity_id.split('.')[0];
+          }
+          return null;
+        ]]]
+
+    aspect_ratio: 1/1
+    show_state: true
+    show_icon: false
+    state_display: >
+      [[[ if (variables.state === true) return variables.translate_unknown; ]]]
+    tap_action:
+      ui_sound_tablet: |
+        [[[
+          let screensaver = states[variables.entity_tablet] === undefined || 
+            states[variables.entity_tablet].state;
+
+          if (variables.state === 'off' && screensaver === 'off') {
+            hass.callService('media_player', 'play_media', {
+              entity_id: variables.entity_browser_mod,
+              media_content_id: '/local/sound/on.m4a',
+              media_content_type: 'music'
+            });
+          }
+          if (variables.state_on && screensaver === 'off') {
+            hass.callService('media_player', 'play_media', {
+              entity_id: variables.entity_browser_mod,
+              media_content_id: '/local/sound/off.m4a',
+              media_content_type: 'music'
+            });
+          }
+        ]]]
+      action: toggle
+      haptic: medium
+    hold_action:
+      haptic: success
+    
+
+    styles:
+      grid:
+        - grid-template-areas: |
+            "icon  circle"
+            "n     n"
+            "s     s"
+        - grid-template-columns: repeat(2, 1fr)
+        - grid-template-rows: auto repeat(2, min-content)
+        - gap: 1.3%
+        - align-items: start
+      name:
+        - justify-self: start
+        - line-height: 121%
+      state:
+        - justify-self: start
+        - line-height: 115%
+      card:
+        - border-radius: var(--custom-button-card-border-radius)
+        - -webkit-tap-highlight-color: rgba(0,0,0,0)
+        - transition: none
+        - padding: 11.5% 10.5% 10.5% 11.5%
+        - --mdc-ripple-color: >
+            [[[
+              return variables.state_on
+                ? 'rgb(0, 0, 0)'
+                : 'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(0, 0, 0, 0.6)'
+                : 'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - background-color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(255, 255, 255, 0.8)'
+                : 'rgba(115, 115, 115, 0.2)';
+            ]]]
+
+  extra_styles:
+    extra_styles: >
+      [[[
+        if (entity && variables.state_on && entity.attributes.brightness) {
+          let hs = entity.attributes.hs_color === undefined,
+            h = hs || entity.attributes.hs_color[0],
+            s = hs || entity.attributes.hs_color[1],
+            l_min = 28,
+            l_max = 48,
+            l_calc = entity.attributes.brightness / 2.54 * (l_max - l_min) / 100 + l_min;
+          var light_color = entity.attributes.color_mode === 'color_temp' || entity.attributes.color_mode === 'brightness'
+            ? `hsl(204, 58%, ${l_calc}%);`
+            : `hsl(${h}, ${s}%, ${l_calc}%);`;
+        }
+
+        return `
+          svg {
+            --light-color:
+            ${ variables.state_on && entity.attributes.brightness !== undefined
+                ? light_color
+                : variables.state_on && entity.attributes.brightness === undefined
+                  ? 'var(--state-icon-active-color);'
+                  : 'var(--state-icon-color);'
+            }
+          }
+          #container {
+            text-align: left !important;
+          }
+          #name, #state {
+            font-size: 1.32vw;
+            letter-spacing: -0.02vw;
+          }
+          #state {
+            text-transform: uppercase;
+          }
+          /* portrait */
+          @media screen and (max-width: 1200px) {
+            #name, #state {
+              font-size: 2vw;
+            }
+          }
+          /* phone */
+          @media screen and (max-width: 800px) {
+            #name, #state {
+              font-size: 3vw;
+            }
+          }
+
+          /* tilt */
+          #ripple, .js-tilt-glare {
+            clip-path: inset(0 round var(--custom-button-card-border-radius));
+            overflow: hidden;
+          }
+          .js-tilt-glare {
+            z-index: 1;
+          }
+          .js-tilt-glare-inner {
+            background-color: rgba(0,0,0,0.9);
+          }
+          #container {
+            transform: translateZ(${variables.tilt_options.parallax});
+          }
+          #card {
+            transform-style: preserve-3d;
+            overflow: visible;
+          }
+
+          ${this._config.template.includes('conditional_media') ? `
+            :host {
+              --blur-intensity: blur(4.5px) brightness(0.8);
+            }
+            /* phone */
+            @media screen and (max-width: 800px) {
+              :host {
+                --blur-intensity: blur(2.5px) brightness(0.8);
+              }
+            }
+            #ripple, .js-tilt-glare {
+              clip-path: inset(0 round calc(var(--custom-button-card-border-radius) / 2));
+            }
+            #container {
+              overflow: hidden;
+            }
+            .marquee {
+              animation: marquee 20s linear infinite;
+            }
+            @keyframes marquee {
+              from {
+                transform: translateX(0%);
+              }
+              to {
+                transform: translateX(-50%);
+              }
+            }
+          `:''}
+
+          ${this._config.template.includes('footer') ? `
+            :host {
+              --name-font-size: 1.22vw;
+              --name-icon-size: 1.5vw;
+              --notify-font-size: 0.9vw;
+              --notify-box-size: 1.8vw;
+              --name-padding-v: 0.7vw;
+              --name-padding-h: 1.1vw;
+              --card-border-radius: 0.6vw;
+            }
+            #ripple, .js-tilt-glare {
+              border-radius: calc(var(--card-border-radius) - 0.1vw);
+              clip-path: inset(0 round calc( var(--custom-button-card-border-radius) - 0.1vw ));
+            }
+            #name {
+              font-size: var(--name-font-size);
+              padding: var(--name-padding-v) var(--name-padding-h);
+              letter-spacing: 0.012vw;
+            }
+            ha-icon {
+              width: var(--name-icon-size);
+              vertical-align: 7%;
+              padding-right: 0.1vw;
+              opacity: 0.4;
+            }
+            #card {
+              border-radius: var(--card-border-radius);
+              background: rgba(115, 115, 115, 0.04);
+            }
+            #notify {
+              font-size: var(--notify-font-size);
+              width: var(--notify-box-size);
+              height: var(--notify-box-size);
+              line-height: var(--notify-box-size);
+              padding-right: 0.5px;
+              padding-top: 0.5px;
+            }
+            /* portrait */
+            @media screen and (max-width: 1200px) {
+              #name {
+                font-size: calc(var(--name-font-size) * 1.4);
+                padding: calc(var(--name-padding-v) * 1.4) calc(var(--name-padding-h) * 1.4);
+              }
+              ha-icon {
+                width: calc(var(--name-icon-size) * 1.4);
+              }
+              #card {
+                border-radius: calc(var(--card-border-radius) * 1.4);
+                margin: 0 0.5vw;
+              }
+              #notify {
+                font-size: calc(var(--notify-font-size) * 1.4);
+                width: calc(var(--notify-box-size) * 1.4);
+                height: calc(var(--notify-box-size) * 1.4);
+                line-height: calc(var(--notify-box-size) * 1.4);
+              }
+            }
+            /* phone */
+            @media screen and (max-width: 800px) {
+              #name {
+                font-size: calc(var(--name-font-size) * 2.7);
+                padding: calc(var(--name-padding-v) * 2.7) calc(var(--name-padding-h) * 2.7);
+                letter-spacing: 0.12vw;
+              }
+              ha-icon {
+                width: calc(var(--name-icon-size) * 2.7);
+              }
+              #card {
+                border-radius: calc(var(--card-border-radius) * 2.7);
+                background: rgba(115, 115, 115, 0.08);
+                margin: 0 0.5vw;
+              }
+              #notify {
+                font-size: calc(var(--notify-font-size) * 2.7);
+                width: calc(var(--notify-box-size) * 2.7);
+                height: calc(var(--notify-box-size) * 2.7);
+                line-height: calc(var(--notify-box-size) * 2.7);
+                padding: 0;
+              }
+            }
+          `:''}
+        `
+      ]]]
+
+  #################################################
+  #                                               #
+  #                     BASE                      #
+  #                                               #
+  #################################################
+
+  base2:
+    variables:
+      state: >
+        [[[ return entity === undefined || entity.state; ]]]
+      timeout: >
+        [[[ return entity === undefined || Date.now() - Date.parse(entity.last_changed); ]]]
+      light_color: >
+        [[[ return entity === undefined || entity.state === 'unavailable' ? 'var(--state-icon-color)' : 'var(--button-card-light-color-no-temperature)'; ]]]
+      circle_input: >
+        [[[ return entity === undefined || Math.round(entity.attributes.brightness / 2.54); ]]]
+
+    aspect_ratio: 1/1
+    show_state: true
+    show_icon: false
+    state_display: >
+      [[[ if (variables.state === true) return '未知'; ]]]
+    tap_action:
+      ui_sound_tablet: |
+        [[[
+          return false
+        ]]]
+      animation_card: |
+        [[[
+          return false
+        ]]]
+
+    styles:
+      grid:
+        - grid-template-areas: |
+            "icon  circle"
+            "n     n"
+            "s     s"
+        - grid-template-columns: repeat(2, 1fr)
+        - grid-template-rows: auto repeat(2, min-content)
+        - gap: 2%
+        - align-items: start
+      name:
+        - justify-self: start
+        - line-height: 115%
+      state:
+        - justify-self: start
+        - line-height: 115%
+      card:
+        - font-family: Sf Display
+        - border-radius: var(--custom-button-card-border-radius)
+        - -webkit-tap-highlight-color: rgba(0,0,0,0)
+        - transition: none
+        - padding: 10%
+        - --mdc-ripple-color: >
+            [[[
+              return (variables.state === 'on' || variables.state === 'open' || variables.state === 'idle' || variables.state === '公司' || variables.state === 'home' || variables.state === 'cool' || variables.state === 'heat' || variables.state === 'auto' || variables.state === 'dry'|| variables.state === 'fan_only' || variables.state === 'fan_only') ?
+                'rgb(0, 0, 0)' :
+                'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - color: >
+            [[[
+              return (variables.state === 'on' || variables.state === 'open' || variables.state === 'idle' || variables.state === '公司' || variables.state === 'home' || variables.state === 'cool' || variables.state === 'heat' || variables.state === 'auto' || variables.state === 'dry'|| variables.state === 'fan_only' || variables.state === 'fan_only') ?
+                'rgba(0, 0, 0, 0.6)' :
+                'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - background-color: >
+            [[[
+              return (variables.state === 'on' || variables.state === 'open' || variables.state === 'idle' || variables.state === '公司' || variables.state === 'home' || variables.state === 'cool' || variables.state === 'heat' || variables.state === 'auto' || variables.state === 'dry'|| variables.state === 'fan_only' || variables.state === 'fan_only') ?
+                'rgba(255, 255, 255, 0.8)' :
+                'rgba(115, 115, 115, 0.2)';
+            ]]]
+    extra_styles: |
+      #name, #state {
+        font-size: 1.34vw;
+        letter-spacing: 0.05vw;
+      }
+      /* portrait */
+      @media screen and (max-width: 1200px) {
+        #name, #state {
+          font-size: 2vw;
+          letter-spacing: 0.05vw;
+        }
+      }
+      /* phone */
+      @media screen and (max-width: 800px) {
+        #name, #state {
+          font-size: 3.1vw;
+          letter-spacing: 0.12vw;
+        }
+      }
+      @keyframes card_bounce {
+        0% {
+          transform: scale(1);
+        }
+        15% {
+          transform: scale(0.9);
+        }
+        25% {
+          transform: scale(1);
+        }
+        30% {
+          transform: scale(0.98);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+    hold_action: more-info
+
+
+
+  clite_template:
+    template:
+      - settings
+    variables:
+      popup_name: 窗帘
+      state: >
+        [[[ return entity === undefined || entity.state; ]]]
+      tip_content: "If the device indicator light is on, click OK and then press and hold the device reset button until the indicator light flashes slowly to exit the networking state, then short press the reset button for 1 second to enter the networking state, if the device indicator light is not on, short press the reser button directly 1 second."
+      device_id: 'zhinengchuangliandianji'
+
+    show_icon: false
+    show_state: true
+    styles:
+      grid:
+        - grid-template-areas: |
+            "icon n s"
+            "buttons buttons buttons"
+        - grid-template-columns: 1fr 1fr 3fr
+        - grid-template-rows: 1fr
+        - gap: 0
+        - align-items: start
+
+      name:
+        - justify-self: start
+        - align-self: center
+        - line-height: 115%
+      state:
+        - justify-self: end
+        - align-self: center
+        - line-height: 115%
+      card:
+        - border-radius: var(--custom-button-card-border-radius)
+        - -webkit-tap-highlight-color: rgba(0,0,0,0)
+        - transition: none
+        - padding: 13% 5% 13% 5%
+        - margin-top: 4.5%
+        - --mdc-ripple-color: >
+            [[[
+              return variables.state_on
+                ? 'rgb(0, 0, 0)'
+                : 'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(0, 0, 0, 0.6)'
+                : 'rgba(255, 255, 255, 0.3)';
+            ]]]
+        - background-color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(255, 255, 255, 0.8)'
+                : 'rgba(115, 115, 115, 0.2)';
+            ]]]
+      custom_fields: 
+        buttons:
+          - display: '[[[return !entity ? "none" : "block"]]]'
+    extra_styles: |
+      
+      #name, #state {
+        font-size: 1.34vw;
+        letter-spacing: 0.05vw;
+      }
+      @media screen and (max-width: 2000px) {
+        #card{
+            padding: 11.5% 5% 11.5% 5%!important
+          }
+      }
+      @media screen and (max-width: 1800px) {
+        #card{
+            padding: 10% 5% 10% 5%!important
+          }
+      }
+       @media screen and (max-width: 1600px) {
+        #card{
+            padding: 9% 5% 9% 5%!important
+          }
+      }
+      @media screen and (max-width: 1400px) {
+        #card{
+            padding: 7% 5% 7% 5%!important
+          }
+      }
+      /* portrait */
+      @media screen and (max-width: 1200px) {
+        #name, #state {
+          font-size: 2vw;
+          letter-spacing: 0.05vw;
+        }
+       #card{
+          padding: 8.5% 5% 8.5% 5%!important
+        }
+      }
+      @media screen and (max-width: 1000px) {
+        #card{
+            padding: 5.5% 5% 5.5% 5%!important
+          }
+      }
+      /* phone */
+      @media screen and (max-width: 800px) {
+        #name, #state {
+          font-size: 3.1vw;
+          letter-spacing: 0.12vw;
+        }
+        #card{
+          padding: 10% 5% 10% 5%!important
+        }
+      }
+
+    
+    custom_fields:
+      icon: >
+        [[[
+            return entity && entity.state && entity.state == 'open'
+              ? '<svg t="1662024021056" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2968" width="70%" height="70%"><path d="M963.550202 973.040768c26.355651 0 42.124279 14.326279 52.932854 27.262206V0H596.931299v1000.312017c10.808575-12.935927 26.581724-27.271248 52.946418-27.271249 32.147654 0 48.549288 21.316472 59.400817 35.421199 10.058011 13.06931 13.080614 15.538033 19.024087 15.538033 5.938951 0 8.957033-2.468723 19.012782-15.535772 10.85605-14.104727 27.257684-35.421199 59.403078-35.421199s48.549288 21.316472 59.400817 35.421199c10.05575 13.06931 13.076092 15.535772 19.017304 15.535772 5.93443 0 8.954772-2.468723 19.010522-15.535772 10.858311-14.106988 27.253163-35.42346 59.403078-35.42346zM433.864471 414.883338h112.107597v304.900832h-112.107597zM433.864471 59.027796h112.107597v304.898571h-112.107597zM53.378218 719.78417h329.529282V414.883338H7.516944v259.037298c0 25.288584 20.574951 45.863535 45.861274 45.863534zM382.9075 59.027796H53.378218c-25.288584 0-45.861274 20.574951-45.861274 45.861273v259.037298h375.390556V59.027796z" p-id="2969" fill="#589dce"></path></svg>'
+              : '<svg t="1662024021056" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2968" width="70%" height="70%"><path d="M963.550202 973.040768c26.355651 0 42.124279 14.326279 52.932854 27.262206V0H596.931299v1000.312017c10.808575-12.935927 26.581724-27.271248 52.946418-27.271249 32.147654 0 48.549288 21.316472 59.400817 35.421199 10.058011 13.06931 13.080614 15.538033 19.024087 15.538033 5.938951 0 8.957033-2.468723 19.012782-15.535772 10.85605-14.104727 27.257684-35.421199 59.403078-35.421199s48.549288 21.316472 59.400817 35.421199c10.05575 13.06931 13.076092 15.535772 19.017304 15.535772 5.93443 0 8.954772-2.468723 19.010522-15.535772 10.858311-14.106988 27.253163-35.42346 59.403078-35.42346zM433.864471 414.883338h112.107597v304.900832h-112.107597zM433.864471 59.027796h112.107597v304.898571h-112.107597zM53.378218 719.78417h329.529282V414.883338H7.516944v259.037298c0 25.288584 20.574951 45.863535 45.861274 45.863534zM382.9075 59.027796H53.378218c-25.288584 0-45.861274 20.574951-45.861274 45.861273v259.037298h375.390556V59.027796z" p-id="2969" fill="#939698"></path></svg>';
+          ]]]
+      buttons:
+        card:
+          type: vertical-stack
+          cards:
+            - type: custom:slider-entity-row
+              entity: cover.zhinengchuangliandianji
+              min: 0
+              max: 100
+              full_row: true
+              hide_state: true
+              attribute: position
+              name: Default
+    tap_action: 
+      !include popup/popup_entity_name_service.yaml
+    state_display: >
+      [[[ if (variables.state === true) return variables.translate_unknown; ]]]
+    
+
+
+  #################################################
+  #                                               #
+  #                    SIDEBAR                    #
+  #                                               #
+  #################################################
+
+  sidebar_template:
+    show_state: false
+    show_icon: false
+    tap_action:
+      action: none
+    name: |
+      [[[
+        if (entity) {
+          let attributes = '';
+          for (const [key, value] of Object.entries(entity.attributes)) {
+            value ? attributes += `<p>${value}</p>` : '';
+          }
+          return attributes;
+        }
+      ]]]
+    extra_styles: |
+      #card {
+        padding: 0;
+      }
+
+      #container {
+        display: flex !important;
+      }
+
+      #name {
+        padding: 1.8vw 2.5vw 0 var(--custom-layout-card-padding);
+        white-space: normal;
+        text-align: left;
+      }
+
+      .time {
+        font-family: SF Text;
+        font-size: var(--sidebar-time-font-size);
+        font-weight: 200;
+        line-height: var(--sidebar-time-line-height);
+        letter-spacing: -0.05vw;
+        margin-left: -0.3vw;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .time-colon {
+        position: relative;
+        top: -.09em;
+      }
+
+      p {
+        font-family: SF Display;
+        font-size: var(--sidebar-font-size);
+        line-height: var(--sidebar-line-height);
+        font-weight: 300;
+        letter-spacing: 0.06vw;
+        color: #6a7377;
+      }
+      
+      p > b {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      /* portrait */
+      @media screen and (max-width: 1200px) {
+        .time {
+          font-size: calc(var(--sidebar-time-font-size) * 1.4 );
+          line-height: calc(var(--sidebar-time-line-height) * 1.4 );
+        }
+
+        p {
+          font-size: calc(var(--sidebar-font-size) * 1.4 );
+          line-height: calc(var(--sidebar-line-height) * 1.4 );
+        }
+      }
+
+      /* phone */
+      @media screen and (max-width: 800px) {
+        .time {
+          font-size: calc(var(--sidebar-time-font-size) * 2.6 );
+        }
+
+        p {
+          font-size: calc(var(--sidebar-font-size) * 2.6 );
+          line-height: calc(var(--sidebar-line-height) * 2.6 );
+          letter-spacing: 0.16vw;
+        }
+
+        #name {
+          padding: 0 0 0 1vw;
+        }
+      }
+  
+  sidebar:
+    show_state: false
+    show_icon: false
+    tap_action:
+      action: none
+    name: |
+      [[[
+        if (entity) {
+          let attr = [];
+          for (let [k, value] of Object.entries(entity.attributes))
+            window.navigator.userAgent.match(/iPhone/i)
+              ? k !== 'time' && k !== 'date' && value !== false && (attr += `<p>${k === 'greet' ? `<span class="iphone">${value}</span>` : `${value}`}</p>`)
+              : value !== false && (attr += `<p>${value}</p>`);
+          return attr;
+        }
+      ]]]
+  #################################################
+  #                                               #
+  #                    FOOTER                     #
+  #                                               #
+  #################################################
+
+  footer:
+    template:
+      - settings
+      - tilt
+      - extra_styles
+    variables:
+      notify: >
+        [[[
+          return false;
+        ]]]
+      tilt_options: >
+        [[[ return { max: 5, scale: 1.1, glare: true, 'max-glare': 0.07, perspective: 1000, speed: 800, parallax: '10px' }; ]]]
+    size: 2vw
+    show_icon: false
+    color: '#9da0a2'
+    custom_fields:
+      notify: >
+        [[[
+          if (Number.isInteger(variables.notify)) {
+            return variables.notify;
+          } else if (variables.notify) {
+            return `<span style="font-weight: 900;">!</span>`;
+          }
+        ]]]
+    styles:
+      card:
+        - color: rgba(157,160,162, 0.55)
+        - width: fit-content
+        - border: 0.12vw solid rgba(58, 69, 73, 0.2)
+        - transition: none
+        - padding: 0 0 0.05vw 0
+        - overflow: visible
+        - --mdc-ripple-color: rgba(0, 0, 0, 0.8)
+      custom_fields:
+        notify:
+          - display: >
+              [[[
+                if (Number.isInteger(variables.notify)) {
+                  return variables.notify > 0
+                    ? 'initial'
+                    : 'none';
+                } else if (variables.notify) {
+                  return variables.notify
+                    ? 'initial'
+                    : 'none';
+                }
+              ]]]
+          - position: absolute
+          - top: -0.9vw
+          - right: -1vw
+          - font-weight: 700
+          - color: '#d6d6d6'
+          - background: '#8b3333'
+          - border-radius: 50%
+          - text-align: center
+          - text-overflow: unset
+          - z-index: 1
+    hold_action:
+      action: none
+    tap_action:
+      haptic: medium
+
+
+  #################################################
+  #                                               #
+  #                    CIRCLE                     #
+  #                                               #
+  #################################################
+
+  circle:
+    custom_fields:
+      circle: >
+        [[[
+          if (variables.state_on) {
+            let input = variables.circle_input,
+              radius = 20.5,
+              circumference = radius * 2 * Math.PI;
+            return `
+              <svg viewBox="0 0 50 50">
+                <style>
+                  circle {
+                    transform: rotate(-90deg);
+                    transform-origin: 50% 50%;
+                    stroke-dasharray: ${circumference};
+                    stroke-dashoffset: ${circumference - input / 100 * circumference};
+                  }
+                  tspan {
+                    font-size: 10px;
+                  }
+                </style>
+                <circle cx="25" cy="25" r="${radius}" stroke="#b2b2b2" stroke-width="1.5" fill="none" />
+                <text x="50%" y="54%" fill="#8d8e90" font-size="14" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle">${input}<tspan font-size="10">%</tspan></text>
+              </svg>
+            `;
+          }
+        ]]]
+    styles:
+      custom_fields:
+        circle:
+          - display: initial
+          - width: 90%
+          - margin: -6% -5% 0 0
+          - justify-self: end
+          - opacity: 1
+
+  #################################################
+  #                                               #
+  #                    LOADER                     #
+  #                                               #
+  #################################################
+
+  loader:
+    custom_fields:
+      loader: >
+        <img src="/local/mattias/loader.svg" width="100%">
+    tap_action:
+      loader: >
+        [[[
+          if (entity) {
+            let elt = this.shadowRoot,
+            loader = (id, style, timeout) => {
+              elt.getElementById(id) && (elt.getElementById(id).style.display = style,
+                window.setTimeout(() => {
+                  elt.getElementById('loader').style.display = 'none'
+                }, 20000))
+            };
+            loader('circle', 'none', 'initial'),
+            loader('loader', 'initial', 'none');
+          }
+        ]]]
+    styles:
+      custom_fields:
+        loader:
+          - display: none
+          - top: -23.8%
+          - right: 23.7%
+          - width: 50%
+          - position: absolute
+          - opacity: 0.5
+          - filter: >
+              [[[ return variables.state_on ? 'none' : 'invert(1)'; ]]]
+
+  #################################################
+  #                                               #
+  #                     TILT                      #
+  #                                               #
+  #################################################
+
+  tilt:
+    custom_fields:
+      tilt: >
+        [[[
+          try {
+            setTimeout(() => {
+              let elt = this.shadowRoot,
+                card = elt.getElementById('card'),
+                ignore = window.navigator.userAgent;
+              if (elt && card && !ignore.match(/iPhone/i) && !ignore.match(/Android/i)) {
+                VanillaTilt.init(card, variables.tilt_options);
+              }
+            }, 0);
+          }
+          catch (e) {
+          }
+        ]]]
+
+  #################################################
+  #                                               #
+  #                    CLIMATE                    #
+  #                                               #
+  #################################################
+
+  # climate:
+  #   template:
+  #     - circle
+  #   custom_fields:
+  #     circle: >
+  #       [[[
+  #         if (entity && entity.attributes.temperature && entity.attributes.current_temperature) {
+  #           let input = variables.circle_input == null ? ' ' : `${parseInt(variables.circle_input)}<tspan font-size="10">°C</tspan>`,
+  #             stroke_color = variables.state === 'cool' || variables.state === 'fan_only' ? '#b2b2b2' : 'none',
+  #             fill_color = variables.state === 'off' ? 'rgba(255,255,255,0.04)' : 'none';
+  #           return `
+  #             <svg viewBox="0 0 50 50">
+  #               <circle cx="25" cy="25" r="20.5" stroke="${stroke_color}" stroke-width="1.5" fill="${fill_color}" />
+  #               <text x="50%" y="54%" fill="#8d8e90" font-size="14" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle">${input}</text>
+  #             </svg>
+  #           `;
+  #         }
+  #       ]]]
+  #   hold_action:
+  #     action: fire-dom-event
+  #     browser_mod:
+  #       command: popup
+  #       title: 次卧空调
+  #       style:
+  #         hui-vertical-stack-card:
+  #           $hui-entities-card$ : |
+  #             #states {
+  #               padding-top: 0.5em;
+  #               padding-bottom: 1.2em;
+  #             }
+  #       card:
+  #         type: vertical-stack
+  #         cards:
+
+  #           - type: thermostat
+  #             entity: climate.miotir_cloud_646336
+
+  #           - type: entities
+  #             card_mod:
+  #               class: content
+  #             entities:
+  #               - entity: sensor.t2_cloud_qse400
+  #                 name: 当前温度
+  #               - entity: sensor.t2_cloud_qse400_humidity
+  #                 name: 当前湿度
+
+  #           - type: custom:mini-graph-card
+  #             entities:
+  #               - color: '#385581'
+  #                 entity: sensor.t2_cloud_qse400
+  #               - color: '#3dd581'
+  #                 entity: sensor.t2_cloud_qse400_humidity
+  #             line_width: 6
+  #             hour24: true
+  #             group: true
+  #             align_icon: left
+  #             align_state: right
+  #             align_header: left
+  #             hours_to_show: 24
+  #             show:
+  #               {fill: fade, icon: false, name: false, state: false, 
+  #               name_adaptive_color: false, labels: hover, legend: false}
+  #             tap_action:
+  #               action: none
+
+  #################################################
+  #                                               #
+  #                    UPDATER                    #
+  #                                               #
+  #################################################
+
+  updater:
+    show_state: true
+    show_name: false
+    show_icon: false
+    styles:
+      state:
+        - text-align: left
+        - justify-self: left
+        - white-space: normal
+      card:
+        - cursor: default
+        - padding: 0.2em 0 0 0.6em
+        - letter-spacing: var(--mdc-typography-body1-letter-spacing)
+    tap_action:
+      href:
+    extra_styles: |
+      #ripple {
+        display: none;
+      }
+      ha-icon {
+        width: 1.4em;
+        vertical-align: 12%;
+        opacity: 0.5;
+        padding-right: 2px;
+      }
+      .title {
+        font-size: 1.3em;
+        font-weight: 500;
+      }
+      .subtitle {
+        font-size: 0.95em;
+        line-height: 0.7em;
+        padding-left: 3px;
+        padding-bottom: 10px;
+        font-weight: 500;
+        color: #828383;
+      }
+      a {
+        color: var(--primary-color);
+      }
+      ul {
+        margin-top: -0.6em;
+        font-size: 0.88em;
+        letter-spacing: 0.5px;
+        line-height: 1.6em;
+      }
+      code {
+        background-color: var(--secondary-background-color);
+      }
+
+  # updater_hass:
+  #   template:
+  #     - updater
+  #     - settings
+  #   state_display: |
+  #     [[[
+  #       if (entity) {
+  #         let links = new RegExp('<a href="([^"]+)"', "g"),
+  #           installed = entity.state,
+  #           hass_version_latest = states['sensor.hass_version_latest'],
+  #           hass_version_latest_beta = states['sensor.hass_version_latest_beta'],
+  #           hass_release_notes = states['sensor.hass_release_notes'],
+  #           hass_release_notes_rc = states['sensor.hass_release_notes_rc'];
+
+  #         let latest = installed.includes('b')
+  #           ? hass_version_latest_beta.state
+  #           : hass_version_latest.state;
+
+  #         let release_notes = installed.includes('b')
+  #           ? marked.parse(hass_release_notes.attributes.body)
+  #           : marked.parse(hass_release_notes_rc.attributes.body);
+
+  #         let subtitle = installed === latest
+  #           ? `${variables.translate_no_updates} <b>&larr;</b> ${installed}`
+  #           : `${ !installed.includes('.') || !latest.includes('.')
+  #               ? `${variables.translate_no_updates} <b>&larr;</b> ${installed}`
+  #               : `${installed} <b>&rarr;</b> ${latest} ${variables.translate_available} ${String.fromCodePoint("0x1f389")}`
+  #             }`;
+
+  #         let output = installed === latest
+  #           ? '<ul></ul>'
+  #           : `${ !installed.includes('.') || !latest.includes('.')
+  #               ? '<ul></ul>'
+  #               : release_notes.replace(links, '<a href="#" onclick="window.open(\'$1\')"')
+  #             }`;
+
+  #         return `
+  #           <ha-icon icon="mdi:home-assistant"></ha-icon> <span class="title">Home Assistant</span><br>
+  #           <p class="subtitle">${subtitle}</p>
+  #           ${output}
+  #         `;
+  #         }
+  #     ]]]
+
+  # updater_hacs:
+  #   template:
+  #     - updater
+  #     - settings
+  #   state_display: |
+  #     [[[
+  #       if (entity) {
+  #         let output = '',
+  #           hacs_version = states['sensor.template_hacs_version'] || undefined;
+  #         var arr = entity.attributes.repositories === undefined
+  #           ? []
+  #           : entity.attributes.repositories;
+  #         for (var i = 0; i < arr.length; i++) {
+  #           output += `<li><b><a href="#" onclick="window.open('https://github.com/${arr[i].name}/releases');">
+  #             ${arr[i].display_name}</a></b> ${arr[i].installed_version} <b>&rarr;</b> ${arr[i].available_version}</li>`
+  #         }
+  #         let count = arr.length;
+  #         let subtitle = count === 0
+  #           ? `${variables.translate_no_updates} ${hacs_version === undefined || hacs_version.state === 'unknown' ? ' ' : `<b>&larr;</b> ${hacs_version.state}`}`
+  #           : `${count} ${count === 1 ? variables.translate_update_available : variables.translate_updates_available} ${String.fromCodePoint('0x1f389')}`;
+  #         return `
+  #           <ha-icon icon="hacs:hacs"></ha-icon> <span class="title">Community Store</span><br>
+  #           <p class="subtitle">${subtitle}</p>
+  #           <ul>${output}</ul>
+  #         `;
+  #       }
+  #     ]]]
+
+  # updater_other:
+  #   template:
+  #     - updater
+  #     - settings
+  #   state_display: |
+  #     [[[
+  #       if (entity) {
+  #         let output = '';
+  #         let attr = Object.fromEntries(
+  #           Object.entries(entity.attributes).filter(([, value]) => {
+  #             return value != false;
+  #           })
+  #         );
+  #         let count = Object.keys(attr).length;
+  #         for (const [, value] of Object.entries(attr)) {
+  #           output += `<li>${value}</li>`;
+  #         }
+  #         let subtitle = count == 0
+  #           ? variables.translate_no_updates
+  #           : `${count} ${count == 1 ? variables.translate_update_available : variables.translate_updates_available} ${String.fromCodePoint('0x1f389')}`;
+  #         return `
+  #           <ha-icon icon="mdi:update"></ha-icon> <span class="title">my-family</span><br>
+  #           <p class="subtitle">${subtitle}</p>
+  #           <ul>${output}</ul>
+  #         `;
+  #       }
+  #     ]]]
+
+  # hacs_iframe:
+  #   tap_action:
+  #     action: fire-dom-event
+  #     browser_mod:
+  #       command: popup
+  #       title: HACS
+  #       style:
+  #         div: |
+  #           .content {
+  #             padding: 0;
+  #           }
+  #         hui-iframe-card$: |
+  #           ha-card {
+  #             margin-left: -58px;
+  #           }
+  #       large: true
+  #       card:
+  #         type: iframe
+  #         url: >
+  #           [[[ return `/${hass.panels.hacs.url_path}` ]]]
+  #   template: icon_name
+
+  # hacs_navigate_ios:
+  #   tap_action:
+  #     close_popup: >
+  #       [[[ hass.callService('browser_mod', 'close_popup'); ]]]
+  #     action: navigate
+  #     navigation_path: >
+  #       [[[ return `/${hass.panels.hacs.url_path}` ]]]
+  #   template: icon_name
+
+  #################################################
+  #                                               #
+  #                     LIGHT                     #
+  #                                               #
+  #################################################
+
+  light:
+    template:
+      - base
+      - circle
+    variables:
+      circle_input: >
+        [[[ return entity === undefined || Math.round(entity.attributes.brightness / 2.54); ]]]
+    show_state: true
+    styles:
+      grid:
+        - grid-template-areas: |
+            "s circle"
+            "icon icon"
+            "n n"
+        - grid-template-columns: 1fr 1fr
+        - grid-template-rows: 1fr 1fr 1fr
+        - gap: 1.3%
+        - align-items: start
+      name:
+        - justify-self: center
+        - line-height: 121%
+        - color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(115, 115, 115, 1.0)'
+                : '#bdbdbd';
+            ]]]
+      state:
+        - justify-self: start
+        - line-height: 115%
+        - color: >
+            [[[
+              return variables.state_on
+                ? 'rgba(115, 115, 115, 0.9)'
+                : '#bdbdbd';
+            ]]]
+      card:
+        - background: >
+            [[[
+              return variables.state_on
+                ? variables.linear_gradient ? variables.linear_gradient : 'linear-gradient(180deg, #FDE9C2 0%, #FFA900 100%)'
+                : 'rgba(115, 115, 115, 0.2)';
+            ]]]
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+        circle:
+          - display: initial
+          - width: 90%
+          - margin: -25% -15% 0 0
+          - justify-self: end
+          - opacity: 1
+    custom_fields:
+      circle: >
+        [[[
+            if (variables.state_on)
+              return `<ha-icon
+                      icon="mdi:toggle-switch-outline"
+                      style="width: 100%; height: 100%; color: rgba(240, 255, 240, 0.8); ">
+                    </ha-icon>`
+            return `<ha-icon
+                    icon="mdi:toggle-switch-off"
+                    style="width: 100%; height: 100%; color: rgba(160, 160, 160, 0.2) ;">
+                    </ha-icon>`;
+        ]]]
+    hold_action:
+      action: more-info
+    # hold_action:
+    #   action: fire-dom-event
+    #   browser_mod:
+    #     command: popup
+    #     title: >
+    #       [[[ return entity.attributes.friendly_name; ]]]
+    #     card:
+    #       type: entities
+    #       entities:
+    #         - type: custom:light-popup-card
+    #           entity: >
+    #             [[[ return entity.entity_id ]]]
+    #           icon: none
+    #           fullscreen: false
+    #           brightnessWidth: 130px
+    #           brightnessHeight: 360px
+    #           borderRadius: 1.7em
+    #           sliderColor: '#c7c7c7'
+    #           sliderColoredByLight: true
+    #           sliderTrackColor: rgba(25, 25, 25, 0.9)
+    #           displayType: slider
+    #         - type: custom:hui-element
+    #           card_type: horizontal-stack
+    #           card_mod:
+    #             style: >
+    #               #root {
+    #                 justify-content: center;
+    #                 margin-top: 2em;
+    #               }
+    #           cards:
+    #             - type: custom:button-card
+    #               styles:
+    #                 card:
+    #                   - background: '#d8d9e1'
+    #               tap_action:
+    #                 action: call-service
+    #                 service: light.turn_on
+    #                 service_data:
+    #                   entity_id: >
+    #                     [[[ return entity.entity_id ]]]
+    #                   color_temp: 153
+    #               template: color_light
+    #             - type: custom:button-card
+    #               styles:
+    #                 card:
+    #                   - background: '#d5b08d'
+    #               tap_action:
+    #                 action: call-service
+    #                 service: light.turn_on
+    #                 service_data:
+    #                   entity_id: >
+    #                     [[[ return entity.entity_id ]]]
+    #                   color_temp: 326
+    #               template: color_light
+    #         - type: custom:hui-element
+    #           card_type: horizontal-stack
+    #           card_mod:
+    #             style: >
+    #               #root {
+    #                 justify-content: center;
+    #                 margin-bottom: 1em;
+    #               }
+    #           cards:
+    #             - type: custom:button-card
+    #               styles:
+    #                 card: 
+    #                   - background: '#ce944b'
+    #               tap_action:
+    #                 action: call-service
+    #                 service: light.turn_on
+    #                 service_data:
+    #                   entity_id: >
+    #                     [[[ return entity.entity_id ]]]
+    #                   color_temp: 500
+    #               template: color_light
+    #             - type: custom:button-card
+    #               styles:
+    #                 card:
+    #                   [background: 'radial-gradient(circle, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 80%), 
+    #                   conic-gradient(rgb(120, 39, 230), rgb(230, 34, 231), rgb(228, 5, 136), rgb(228, 25, 25), 
+    #                   rgb(229, 105, 30), rgb(232, 226, 46), rgb(125, 230, 41), rgb(52, 232, 40), rgb(51, 231, 92), 
+    #                   rgb(52, 232, 224), rgb(32, 125, 229), rgb(18, 39, 229), rgb(120, 39, 230))']
+    #               tap_action:
+    #                 action: fire-dom-event
+    #                 browser_mod:
+    #                   command: popup
+    #                   title: >
+    #                     [[[ return entity.attributes.friendly_name ]]]
+    #                   card:
+    #                     type: custom:light-entity-card
+    #                     entity: >
+    #                       [[[ return entity.entity_id ]]]
+    #                     brightness: true
+    #                     color_temp: true
+    #                     full_width_sliders: false
+    #                     hide_header: true
+    #                     show_slider_percent: true
+    #                     smooth_color_wheel: true
+    #                     persist_features: true
+    #                     consolidate_entities: false
+    #               template: color_light
+  
+  #################################################
+  #                                               #
+  #                     COMMON                    #
+  #                                               #
+  #################################################
+
+  common:
+    template:
+      - light
+    variables:
+      linear_gradient: 'linear-gradient(180deg, #66ffd9 0%, #1aff8c 100%)'
+    styles:
+      grid:
+        - grid-template-areas: |
+            "s s circle"
+            "icon icon icon"
+            "n n n"
+        - grid-template-columns: 1fr 1fr
+        - grid-template-rows: 1fr 1fr 1fr
+        - gap: 1.3%
+        - align-items: start
+    tap_action:
+      action: more-info
+    custom_fields:
+      circle: >
+        [[[
+            return ``;
+        ]]]
+  
+  #################################################
+  #                                               #
+  #                     CLIMATE                   #
+  #                                               #
+  #################################################
+
+  gs_climate:
+    template:
+      - common
+    styles:
+      card:
+        - background: >
+            [[[
+              if(! variables.state_on) {
+                return 'rgba(115, 115, 115, 0.2)';
+              }
+
+              if(entity && entity.state == 'auto') {
+                return 'linear-gradient(180deg, #66ffd9 0%, #1aff8c 100%)';
+              }
+
+              if(entity && entity.state == 'heat') {
+                return 'linear-gradient(180deg, #ffc299 0%, #ff3300 100%)';
+              }
+
+              if(entity && entity.state == 'cool') {
+                return 'linear-gradient(180deg, #3399ff 0%, #0000ff 100%)';
+              }
+
+              if(entity && entity.state == 'dry') {
+                return 'linear-gradient(180deg, #ffd9b3 0%, #ffcc00 100%)';
+              }
+
+              if(entity && entity.state == 'fan_only') {
+                return 'linear-gradient(180deg, #80ffff 0%, #33cccc 100%)';
+              }
+
+              return 'rgba(255, 255, 255, 0.8)';
+            ]]]
+  
+  #################################################
+  #                                               #
+  #                     IR                        #
+  #                                               #
+  #################################################
+
+  gs_ir:
+    template:
+      - common
+    show_state: false
+
+  #################################################
+  #                                               #
+  #                    PERSON                     #
+  #                                               #
+  #################################################
+
+  person:
+    template:
+      - base
+      - circle
+    state_display: >
+      [[[
+        if (entity) {
+          return variables.state === 'home'
+            ? variables.translate_home
+            : variables.state === 'not_home'
+              ? variables.translate_not_home
+              : variables.translate_home;
+        }
+        return variables.translate_unknown;
+      ]]]
+    triggers_update: sensor.time
+    hold_action:
+      action: none
+    styles:
+      custom_fields:
+        icon:
+          - clip-path: circle()
+          - width: 77%
+          - pointer-events: none
+          - display: grid
+    custom_fields:
+      icon: >
+        [[[
+          return entity && variables.entity_picture
+            ? `<img src="${variables.entity_picture}" width="100%">`
+            : null;
+        ]]]
+      circle: >
+        [[[
+          if (entity) {
+            let time = c => {
+              let s = (c/1e3), m = (c/6e4), h = (c/36e5), d = (c/864e5);
+              return s < 60 ? parseInt(s) + 's' : m < 60 ? parseInt(m) + 'm' : h < 24 ? parseInt(h) + 'h' : parseInt(d) + 'd';
+            },
+            last_changed = states[variables.retain] == null || states[variables.retain].state == 'unavailable'
+              ? time(Date.now() - Date.parse(entity.last_changed))
+              : time(Date.now() - Date.parse(states[variables.retain].state)),
+            stroke = variables.state === 'home'
+              ? '#b2b2b2'
+              : 'none',
+            fill = variables.state !== 'home'
+              ? 'rgba(255,255,255,0.04)'
+              : 'none';
+            return `
+              <svg viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="20.5" stroke="${stroke}" stroke-width="1.5" fill="${fill}" />
+                <text x="50%" y="54%" fill="#8d8e90" font-size="14" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle">${last_changed}</text>
+              </svg>
+            `;
+          }
+        ]]]
+
+  #################################################
+  #                                               #
+  #                  BASE MEDIA                   #
+  #                                               #
+  #################################################
+
+  base_media:
+    tap_action:
+      action: >
+        [[[
+          return variables.media_on
+            ? 'call-service'
+            : 'none';
+        ]]]
+      service: media_player.media_play_pause
+      service_data:
+        entity_id: >
+          [[[
+            return variables.entity_id;
+          ]]]
+    double_tap_action:
+      action: more-info
+    styles:
+      card:
+        - color: >
+            [[[
+              return variables.media_on && variables.entity_picture === undefined
+                ? 'rgba(0, 0, 0, 0.6)'
+                : variables.media_off
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : '#efefef';
+            ]]]
+        - text-shadow: >
+            [[[
+              return variables.media_off || variables.entity_picture === undefined
+                ? 'none'
+                : '1px 1px 5px rgba(18, 22, 23, 0.9)';
+            ]]]
+
+  #################################################
+  #                                               #
+  #                     MEDIA                     #
+  #                                               #
+  #################################################
+
+  media:
+    template:
+      - base
+      - base_media
+    styles:
+      custom_fields:
+        icon:
+          - width: 70%
+          - margin-left: 2%
+          - fill: '#9da0a2'
+          - display: >
+              [[[
+                return variables.media_off || variables.entity_picture === undefined
+                  ? 'initial'
+                  : 'none';
+              ]]]
+      card:
+        - background-color: none
+        - background-size: cover
+        - background-image: >
+            [[[
+              return variables.media_on && variables.entity_picture === undefined
+                ? 'linear-gradient(0deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) 100%)'
+                : variables.media_off
+                  ? 'linear-gradient(0deg, rgba(115, 115, 115, 0.2) 0%, rgba(115, 115, 115, 0.2) 100%)'
+                  : `linear-gradient(0deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,0) 100%), url(${variables.entity_picture})`;
+            ]]]
+
+  #################################################
+  #                                               #
+  #               CONDITIONAL MEDIA               #
+  #                                               #
+  #################################################
+
+  conditional_media:
+    aspect_ratio: 1000/996
+    template:
+      - base
+      # - media_youtube
+      - icon_play_pause
+    variables:
+      i: >
+        [[[
+          if (entity) {
+            let data = entity.attributes.data;
+            return data === undefined || Math.floor(Math.random() * (data.length - 1)) + 1;
+          }
+        ]]]
+    state_display: >
+      [[[
+        if (entity) {
+          let elt = this.shadowRoot,
+            await = setTimeout(marquee,0),
+            data = entity.attributes.data,
+            artist = entity.attributes.media_artist,
+            title = entity.attributes.media_title;
+
+            if (data !== undefined) {
+              var number = data[variables.i].number === undefined && data[variables.i].aired !== undefined
+                ? `(${data[variables.i].aired.split("-")[0]})`
+                : data[variables.i].number === undefined && data[variables.i].aired === undefined
+                  ? ' '
+                  : data[variables.i].number,
+                output = `${data[variables.i].title} ${number}`;
+            } else {
+              var output = artist === undefined && title !== undefined
+                ? title
+                : title === undefined && artist !== undefined
+                  ? artist
+                  : title !== undefined && artist !== undefined
+                    ? `${artist} - ${title}`
+                    : variables.translate_idle;
+            }
+
+          function marquee() {
+            let state = elt.getElementById("state"),
+              container = elt.getElementById("container");
+
+            if (state && container) {
+              state.innerHTML = output;
+              let ro = new ResizeObserver(entries => {
+                let spacer = "&nbsp;".repeat(3),
+                  s = entries[0],
+                  c = entries[1],
+                  r = s && s.contentRect &&
+                      c && c.contentRect &&
+                      s.contentRect.width !== 0 &&
+                      c.contentRect.width !== 0;
+
+                if (r && s.contentRect.width < c.contentRect.width) {
+                  state.classList.remove("marquee");
+                }
+                else if (r && s.contentRect.width >= c.contentRect.width) {
+                  state.innerHTML = `${output} ${spacer} ${output} ${spacer}&nbsp;`;
+                  state.classList.add("marquee");
+                }
+              });
+              ro.observe(state);
+              ro.observe(container);
+            }
+          }
+          return output;
+        }
+        return variables.translate_unknown;
+      ]]]
+    tap_action:
+      action: call-service
+      service: media_player.media_play_pause
+      service_data:
+        entity_id: >
+          [[[ return variables.entity_id; ]]]
+    styles:
+      grid:
+        - gap: 0.65%
+      name:
+        - padding: 0.2vw
+        - margin: -0.2vw
+        - width: 100%
+      state:
+        - padding-bottom: 5.25%
+        - max-width: unset
+        - overflow: visible
+      card:
+        - padding: 5.75% 5.25% 0 5.75%
+        - border-radius: calc(var(--custom-button-card-border-radius) / 2)
+        - background: rgba(115, 115, 115, 0.2) center center/cover no-repeat
+        - background-image: &media_background_image >
+            [[[
+              if (entity) {
+                return entity.attributes.data !== undefined
+                  ? `url("${entity.attributes.data[variables.i].fanart}"), url("${entity.attributes.data[variables.i].poster}")`
+                  : `url("${variables.entity_picture}")`;
+              }
+            ]]]
+        - color: >
+            [[[
+              return entity === undefined
+                ? 'rgba(255, 255, 255, 0.3)'
+                : '#efefef';
+            ]]]
+        - text-shadow: >
+            [[[
+              return entity === undefined
+                ? 'none'
+                : '1px 1px 5px rgba(18, 22, 23, 0.9)';
+            ]]]
+      custom_fields:
+        icon:
+          - width: 30%
+          - fill: >
+              [[[
+                return entity && variables.media_on
+                  ? 'rgba(255, 255, 255, 0.8)'
+                  : '#9da0a2';
+              ]]]
+        blur_overlay:
+          - display: block
+          - position: absolute
+          - width: 103.1%
+          - height: 103.1%
+          - filter: var(--blur-intensity)
+          - clip-path: >
+              inset(74.5% 1.45% 1.45% 1.45% round 0 0 calc(var(--custom-button-card-border-radius) / 2) calc(var(--custom-button-card-border-radius) / 2))
+          - background: center center/cover no-repeat
+          - background-image: *media_background_image
+          - left: -1.5%
+          - bottom: -1.6%
+    custom_fields:
+      blur_overlay: >
+        [[[
+          setTimeout(() => {
+            let elt = this.shadowRoot,
+              card = elt.getElementById('card'),
+              container = elt.getElementById('container'),
+              blur_overlay = elt.getElementById('blur_overlay');
+
+            if (elt && card && container && blur_overlay) {
+              card.insertBefore(blur_overlay, container);
+            }
+          }, 0);
+          return ' ';
+        ]]]
+
+  #################################################
+  #                                               #
+  #                 MEDIA YOUTUBE                 #
+  #                                               #
+  #################################################
+
+  # media_youtube:
+  #   variables:
+  #     token: !secret youtube_token
+  #   custom_fields:
+  #     youtube: >
+  #       [[[
+  #         try {
+  #           let elt = this.shadowRoot;
+  #           if (entity && elt && entity.attributes.app_name === 'YouTube') {
+  #             let api = 'https://www.googleapis.com/youtube/v3/search',
+  #               artist = entity.attributes.media_artist,
+  #               title = entity.attributes.media_title,
+  #               options = 'type=video&part=snippet&maxResults=1',
+  #               token = variables.token.split('|'),
+  #               random = Math.floor(Math.random() * token.length),
+  #               url = `${api}?q="${artist}%20${title}"&${options}&key=${token[random]}`;
+
+  #             fetch(url).then(e => e.json()).then(e => {
+  #               if (e.items[0].snippet.thumbnails !== undefined) {
+  #                 let json = e.items[0].snippet.thumbnails,
+  #                   hq = json[Object.keys(json).pop()].url,
+  #                   card = elt.getElementById('card'),
+  #                   blur_overlay = elt.getElementById('blur_overlay');
+
+  #                 if (entity.state !== 'idle' && artist !== undefined && title !== undefined) {
+  #                   card.style.backgroundImage = `url("${hq}")`;
+  #                   blur_overlay.style.backgroundImage = `url("${hq}")`;
+  #                   card.style.backgroundSize = '178%';
+  #                   blur_overlay.style.backgroundSize = '178%';
+  #                 }
+  #               }
+  #             });
+  #           }
+  #         }
+  #         catch (e) {
+  #         }
+  #       ]]]
+
+  #################################################
+  #                                               #
+  #                 COMPUTER LOCK                 #
+  #                                               #
+  #################################################
+
+  # lock:
+  #   tap_action:
+  #     loader: |
+  #       [[[
+  #         let elt = this.shadowRoot;
+  #         if (variables.state_on && variables.lock === 'locked') {
+  #           elt.getElementById('lock').classList.add('locked');
+  #           window.setTimeout(() => {
+  #             elt.getElementById('lock').classList.remove('locked');
+  #           }, 1100);
+  #         } else {
+
+  #           // duplicate of "loader" template
+  #           let loader = (id, style, timeout) => {
+  #               elt.getElementById(id) && (elt.getElementById(id).style.display = style,
+  #                 window.setTimeout(() => {
+  #                   elt.getElementById('loader').style.display = 'none'
+  #                 }, 20000))
+  #           };
+  #           loader('circle', 'none', 'initial'),
+  #           loader('loader', 'initial', 'none');
+  #         }
+  #       ]]]
+  #   custom_fields:
+  #     circle: >
+  #       [[[
+  #         if (entity && variables.trigger) {
+  #           let state = variables.trigger.state === 'on' ? 'locked' : null;
+  #           if (variables.lock === 'locked') {
+  #             return `
+  #               <svg viewBox="0 0 50 50">
+  #                 <style>
+  #                   @keyframes locked {
+  #                     from,
+  #                     to {
+  #                       transform: translateX(0);
+  #                     }
+  #                     10%,
+  #                     30%,
+  #                     50%,
+  #                     70%,
+  #                     90% {
+  #                       transform: translateX(-8%);
+  #                     }
+  #                     20%,
+  #                     40%,
+  #                     60%,
+  #                     80% {
+  #                       transform: translateX(8%);
+  #                     }
+  #                   }
+  #                   .locked {
+  #                     animation: locked 1.1s;
+  #                   }
+  #                 </style>
+  #                 <path id="lock" class="${state}" d="M8.2 22.6h2.4v-7.2C10.6 7.5 17.1 1 25 1s14.4 6.4 14.4 14.4v7.2h2.4V49H8.2m26.4-26.4v-7.2c0-5.3-4.3-9.6-9.6-9.6s-9.6 4.3-9.6 9.6v7.2"/>
+  #               </svg>
+  #             `;
+  #           }
+  #         }
+  #       ]]]
+  #   styles:
+  #     custom_fields:
+  #       circle:
+  #         - width: 45%
+  #         - fill: var(--state-icon-color)
+  #         - margin: 1% 2% 0 0
+  #         - justify-self: end
+  #         - opacity: 1
+  #         - display: grid
+
+  #################################################
+  #                                               #
+  #                    LAUNDRY                    #
+  #                                               #
+  #################################################
+
+  # laundry:
+  #   show_icon: false
+  #   show_name: false
+  #   show_state: true
+  #   tap_action:
+  #     restart: >
+  #       [[[
+  #         hass.callService('timer', 'cancel', {
+  #           entity_id: entity.entity_id
+  #         });
+  #         hass.callService('timer', 'start', {
+  #           entity_id: entity.entity_id
+  #         });
+  #       ]]]
+  #   hold_action:
+  #     cancel: >
+  #       [[[
+  #         hass.callService('timer', 'cancel', {
+  #           entity_id: entity.entity_id
+  #         });
+  #       ]]]
+  #   styles:
+  #     card:
+  #       - background: '#202a2f30'
+  #       - border-radius: 0.7vw
+  #       - border: '0.2vw solid #292c2e'
+  #     state:
+  #       - font-size: 2.7vw
+  #       - font-family: SF Mono, Roboto
+  #       - opacity: 0.65
+  #       - padding: 0.55vw 1.2vw 0.5vw 1.2vw
+
+  #################################################
+  #                                               #
+  #                 POPUP BUTTONS                 #
+  #                                               #
+  #################################################
+
+  icon_name:
+    size: 1.4em
+    color: '#9da0a2'
+    styles:
+      grid:
+        - grid-template-areas: '"i n"'
+        - grid-column-gap: 0.3em
+      card:
+        - color: '#9da0a2'
+        - border-radius: 0.6em
+        - padding: 1em 1.4em 1em 1.2em
+        - width: max-content
+        - font-size: 1.06em
+        - font-weight: 500
+        - letter-spacing: 0.015em
+        - background: '#FFFFFF10'
+
+  icon_only:
+    show_name: false
+    color: '#9da0a2'
+    styles:
+      card:
+        - color: '#9da0a2'
+        - border-radius: 0.6em
+        - width: 4em
+        - height: 3.7em
+        - background: '#FFFFFF10'
+  
+  color_light:
+    styles:
+      card:
+        - border-radius: 50%
+        - height: 4em
+        - width: 4em
+        - margin: 4px
+
+  #################################################
+  #                                               #
+  #                     ICONS                     #
+  #                                               #
+  #################################################
+
+  icon_light:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<img width="100%" src="/local/mattias/light/light-on-' + (variables.light_index > 0 ? variables.light_index : '1') + '.png"> ' ;   
+        else return '<img width="100%" src="/local/mattias/light/light-off-0.png">'; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_switch:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<img width="100%" src="/local/mattias/switch/switch-on.svg"> ' ;   
+        else return '<img width="100%" src="/local/mattias/switch/switch-off.svg">'; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_socket:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<img width="100%" src="/local/mattias/socket/socket-on.svg"> ' ;   
+        else return '<img width="90%" src="/local/mattias/socket/socket-off.svg">'; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_climate:
+    styles:
+      custom_fields:
+        icon:
+          - width: 78%
+          - margin-left: -10%
+          - fill: >
+              [[[ return variables.state === 'cool' || variables.state === 'fan_only' ? '#5daeea' : '#9da0a2'; ]]]
+    custom_fields:
+      icon: >
+        [[[
+          if (entity && entity.state && ['auto', 'heat', 'cool', 'fan_only', 'dry'].indexOf(entity.state) !== -1) {
+            return '<img width="100%" src="/local/mattias/climate/climate-' + entity.state + '-' + (variables.climate_index > 0 ? variables.light_index : '0') + '.png"> ' ;   
+          }
+
+          return `<svg viewBox="0 0 50 50">
+                    <path d="M36.8 1.2v1.7a5.34 5.34 0 0 1-5.3 5.3H18.4a5.34 5.34 0 0 1-5.3-5.3V1.2c-2.6.4-4.7 2.8-4.7 5.6v36.5c0 3.1 2.6 5.7 5.7 5.7h21.8c3.1 0 5.7-2.6 5.7-5.7V6.8c0-2.8-2.1-5.2-4.8-5.6zm-1.7 35.6c-.2 0-.4 0-.5-.1-.4-.1-1.2-.2-2.4-.6-.5-.2-.8-.3-1.2-.4-.3-.1-.7-.3-1.4-.5-1-.4-1.5-.5-1.9-.6-.5-.1-1.1-.2-1.9-.2s-1.4.2-1.9.4c-1 .3-1.8.7-2.1.9l-.6.3a9.75 9.75 0 0 1-1.4.6c-.3.1-.9.3-1.6.3h-.3c-.4 0-1 0-2-.2-.3-.1-.6-.1-.8-.2v-2.7l1.3.3c.5.1 1.3.2 1.7.2.5 0 .9-.2 1.1-.2.4-.1.6-.2 1-.4.2-.1.4-.2.7-.4.4-.2 1.3-.7 2.5-1 .6-.2 1.4-.4 2.5-.5s2 .1 2.5.2c.6.1 1.2.3 2.2.7l1.5.5c.3.1.6.2 1 .4 1 .3 1.8.5 2.1.5h.1v2.7zm0-6c-.2 0-.4 0-.5-.1-.4-.1-1.2-.2-2.4-.6-.5-.2-.8-.3-1.2-.4-.3-.1-.7-.3-1.4-.5-1-.4-1.5-.5-1.9-.6-.5-.1-1.1-.2-1.9-.2s-1.4.2-1.9.4c-1 .3-1.8.7-2.1.9l-.6.3a9.75 9.75 0 0 1-1.4.6c-.3.1-.9.3-1.6.3h-.3c-.4 0-1 0-2-.2-.3-.1-.6-.1-.8-.2v-2.7l1.3.3c.5.1 1.3.2 1.7.2.5 0 .9-.2 1.1-.2.4-.1.6-.2 1-.4.2-.1.4-.2.7-.4.4-.2 1.3-.7 2.5-1 .6-.2 1.4-.4 2.5-.5s2 .1 2.5.2c.6.1 1.2.3 2.2.7l1.5.5c.3.1.6.2 1 .4 1 .3 1.8.5 2.1.5h.1v2.7zm0-6c-.2 0-.4 0-.5-.1-.4-.1-1.2-.2-2.4-.6-.5-.2-.8-.3-1.2-.4-.3-.1-.7-.3-1.4-.5-1-.4-1.5-.5-1.9-.6-.5-.1-1.1-.2-1.9-.2s-1.4.2-1.9.4c-1 .3-1.8.7-2.1.9l-.6.3c-.4.2-.8.4-1.4.6-.3.1-.9.3-1.6.3h-.3c-.4 0-1 0-2-.2-.3-.1-.6-.1-.8-.2v-2.7l1.3.3c.5.1 1.3.2 1.7.2.5 0 .9-.2 1.1-.2.4-.1.6-.2 1-.4.2-.1.4-.2.7-.4.4-.2 1.3-.7 2.5-1 .6-.2 1.4-.4 2.5-.5s2 .1 2.5.2c.6.1 1.2.3 2.2.7l1.5.5c.3.1.6.2 1 .4 1 .3 1.8.5 2.1.5h.1v2.7zM15.7 1.9v-.8h18.6V3c0 1.5-1.2 2.8-2.8 2.8H18.4c-1.5 0-2.8-1.2-2.8-2.8V1.9z"/>
+                  </svg>`
+        ]]]
+    
+  icon_ir:
+    custom_fields:
+      icon: >
+        [[[
+          return '<img width="100%" src="/local/mattias/ir/icon-ir.png"> '
+        ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_common:
+    custom_fields:
+      icon: >
+        [[[
+          if (entity && entity.state && variables.state_on) {
+            return '<img width="100%" src="/local/mattias/common/icon-common-on-2.png"> ';
+          }
+          else {
+            return '<img width="100%" src="/local/mattias/common/icon-common-off.svg"> ';
+          }
+        ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_gs_media_player:
+    custom_fields:
+      icon: >
+        [[[
+          if (entity && entity.state && variables.state_on) {
+            return '<img width="100%" src="/local/mattias/media_player/media_player-on-2.png"> ';
+          }
+          else {
+            return '<img width="100%" src="/local/mattias/media_player/media_player-off-2.png"> ';
+          }
+        ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 50%
+          - margin-left: 25%
+          - margin-top: -10%
+  
+  icon_ceiling_light:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<svg id="e7x4u4hifr771"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#e7x4u4hifr774 {
+        animation-name: e7x4u4hifr774__tt, e7x4u4hifr774_c_o;
+        animation-duration: 1000ms; animation-fill-mode: forwards;
+        animation-timing-function: linear; animation-direction: normal;
+        animation-iteration-count: 1;   }@keyframes e7x4u4hifr774__tt { 0%
+        {transform: translate(0px,0px) translate(0px,0px)} 50% {transform:
+        translate(0px,0px) translate(0px,0.500000px)} 100% {transform:
+        translate(0px,0px) translate(0px,0px)} }@keyframes e7x4u4hifr774_c_o {
+        0% {opacity: 0} 100% {opacity: 1} }]]></style><g
+        id="e7x4u4hifr772"><path id="e7x4u4hifr773"
+        d="M11,2L11,7.674000C10.827000,7.735000,10.659000,7.811000,10.500000,7.902000C9.627000,8.408000,9.067000,9.319000,9.010000,10.326000C8.310000,10.478000,7.636000,10.683000,7,10.937000C3.906000,12.188000,2,14.499000,2,17L22,17C22,14.499000,20.094000,12.188000,17,10.937000C16.365000,10.684000,15.691000,10.479000,14.992000,10.328000C14.935000,9.320000,14.374000,8.408000,13.500000,7.902000C13.341000,7.812000,13.173000,7.736000,13,7.676000L13,2L11,2L11,2Z"
+        fill="rgb(87,168,215)" stroke="none" stroke-width="1"/></g><g
+        id="e7x4u4hifr774" transform="translate(0,0) translate(0,0)"
+        opacity="0"><path id="e7x4u4hifr775"
+        d="M9.019000,18.185000C9.019000,19.257000,9.591000,20.247000,10.519000,20.783000C11.447000,21.319000,12.591000,21.319000,13.519000,20.783000C14.447000,20.247000,15.019000,19.257000,15.019000,18.185000L9.019000,18.185000Z"
+        fill="rgb(248,205,65)" stroke="none" stroke-width="1"/></g></svg> ' ;   
+        else return '<svg id="e47a1uy8ttsc1" xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#e47a1uy8ttsc4 {
+        animation-name: e47a1uy8ttsc4__tt, e47a1uy8ttsc4_c_o;
+        animation-duration: 1000ms; animation-fill-mode: forwards;
+        animation-timing-function: linear; animation-direction: normal;
+        animation-iteration-count: 1;   }@keyframes e47a1uy8ttsc4__tt { 0%
+        {transform: translate(0px,0px) translate(0px,0px)} 50% {transform:
+        translate(0px,0px) translate(0px,0.500000px)} 100% {transform:
+        translate(0px,0px) translate(0px,0px)} }@keyframes e47a1uy8ttsc4_c_o {
+        0% {opacity: 1} 100% {opacity: 0.500000} }]]></style><g
+        id="e47a1uy8ttsc2"><path id="e47a1uy8ttsc3"
+        d="M11,2L11,7.674000C10.827000,7.735000,10.659000,7.811000,10.500000,7.902000C9.627000,8.408000,9.067000,9.319000,9.010000,10.326000C8.310000,10.478000,7.636000,10.683000,7,10.937000C3.906000,12.188000,2,14.499000,2,17L22,17C22,14.499000,20.094000,12.188000,17,10.937000C16.365000,10.684000,15.691000,10.479000,14.992000,10.328000C14.935000,9.320000,14.374000,8.408000,13.500000,7.902000C13.341000,7.812000,13.173000,7.736000,13,7.676000L13,2L11,2L11,2Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g><g
+        id="e47a1uy8ttsc4" transform="translate(0,0) translate(0,0)"><path
+        id="e47a1uy8ttsc5"
+        d="M9.019000,18.185000C9.019000,19.257000,9.591000,20.247000,10.519000,20.783000C11.447000,21.319000,12.591000,21.319000,13.519000,20.783000C14.447000,20.247000,15.019000,19.257000,15.019000,18.185000L9.019000,18.185000Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g></svg>'; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -1%
+          - margin-top: 1%
+  icon_light_belt2:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<svg id="enoxq1ihatxi1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#enoxq1ihatxi2 {
+        animation-name: enoxq1ihatxi2__tt, enoxq1ihatxi2_c_o;
+        animation-duration: 3000ms; animation-fill-mode: forwards;
+        animation-timing-function: linear; animation-direction: normal;
+        animation-iteration-count: 1;   }@keyframes enoxq1ihatxi2__tt { 0%
+        {transform: translate(0px,0px) translate(0px,0px)} 16.666667%
+        {transform: translate(0px,0px) translate(0px,0.500000px)} 33.333333%
+        {transform: translate(0px,0px) translate(0px,0px)} 100% {transform:
+        translate(0px,0px) translate(0px,0px)} }@keyframes enoxq1ihatxi2_c_o {
+        0% {opacity: 0} 33.333333% {opacity: 1} 100% {opacity: 1} }]]></style><g
+        id="enoxq1ihatxi2" transform="translate(0,0) translate(0,0)"
+        opacity="0"><path id="enoxq1ihatxi3"
+        d="M20.533000,10.441000C20.497000,10.440000,20.462000,10.445000,20.428000,10.454000L18.109000,11.077000C17.896000,11.134000,17.770000,11.353000,17.826000,11.566000L18.060000,12.439000C17.492000,13.117000,17.248000,14.048000,17.494000,14.968000C17.894000,16.462000,19.430000,17.349000,20.924000,16.948000C22.418000,16.548000,23.305000,15.013000,22.904000,13.519000C22.658000,12.599000,21.981000,11.914000,21.150000,11.611000L20.916000,10.737000C20.869000,10.564000,20.713000,10.442000,20.533000,10.441000ZM3.453000,10.443000C3.278000,10.449000,3.128000,10.569000,3.082000,10.738000L2.849000,11.611000C2.019000,11.914000,1.342000,12.599000,1.096000,13.519000C0.695000,15.013000,1.582000,16.548000,3.076000,16.948000C4.569000,17.348000,6.104000,16.461000,6.504000,14.968000C6.750000,14.048000,6.507000,13.117000,5.939000,12.439000L6.174000,11.566000C6.230000,11.353000,6.103000,11.134000,5.891000,11.077000L3.572000,10.454000C3.533000,10.444000,3.493000,10.440000,3.453000,10.443000ZM10.801000,11.753000C10.579000,11.753000,10.400000,11.932000,10.400000,12.153000L10.400000,13.058000C9.676000,13.566000,9.199000,14.401000,9.199000,15.353000C9.199000,16.900000,10.453000,18.154000,12,18.153000C13.547000,18.154000,14.801000,16.900000,14.801000,15.353000C14.801000,14.401000,14.324000,13.566000,13.600000,13.058000L13.600000,12.153000C13.600000,11.932000,13.420000,11.753000,13.199000,11.753000L10.801000,11.753000Z"
+        fill="rgb(248,205,65)" stroke="none" stroke-width="1"/></g><g
+        id="enoxq1ihatxi4"><path id="enoxq1ihatxi5"
+        d="M2.043000,5.998000L2.043000,6.798000C2.801000,7.181000,3.552000,7.584000,4.340000,7.902000L3.822000,9.834000L6.141000,10.455000L6.649000,8.558000C7.826000,8.833000,9.194000,9.057000,10.844000,9.129000L10.844000,11.103000L13.242000,11.103000L13.242000,9.129000C14.892000,9.057000,16.260000,8.833000,17.438000,8.558000L17.945000,10.455000L20.264000,9.834000L19.746000,7.902000C20.464000,7.627000,21.308000,7.203000,22.043000,6.798000L22.043000,6.098000C22.043000,6.098000,21.154000,6.592000,19.545000,7.207000C17.936000,7.821000,15.469000,8.441000,12.043000,8.441000C8.618000,8.441000,6.150000,7.821000,4.541000,7.207000C2.932000,6.592000,2.043000,5.998000,2.043000,5.998000Z"
+        fill="rgb(87,168,215)" stroke="none" stroke-width="1"/></g></svg> ' ;  
+        else return '<svg id="e10ii05mia9y1" xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#e10ii05mia9y2 {
+        animation-name: e10ii05mia9y2__tt, e10ii05mia9y2_c_o;
+        animation-duration: 3000ms; animation-fill-mode: forwards;
+        animation-timing-function: linear; animation-direction: normal;
+        animation-iteration-count: 1;   }@keyframes e10ii05mia9y2__tt { 0%
+        {transform: translate(0px,0px) translate(0px,0px)} 16.666667%
+        {transform: translate(0px,0px) translate(0px,0.500000px)} 33.333333%
+        {transform: translate(0px,0px) translate(0px,0px)} 100% {transform:
+        translate(0px,0px) translate(0px,0px)} }@keyframes e10ii05mia9y2_c_o {
+        0% {opacity: 1} 33.333333% {opacity: 0.500000} 100% {opacity: 0.500000}
+        }]]></style><g id="e10ii05mia9y2" transform="translate(0,0)
+        translate(0,0)"><path id="e10ii05mia9y3"
+        d="M20.533000,10.441000C20.497000,10.440000,20.462000,10.445000,20.428000,10.454000L18.109000,11.077000C17.896000,11.134000,17.770000,11.353000,17.826000,11.566000L18.060000,12.439000C17.492000,13.117000,17.248000,14.048000,17.494000,14.968000C17.894000,16.462000,19.430000,17.349000,20.924000,16.948000C22.418000,16.548000,23.305000,15.013000,22.904000,13.519000C22.658000,12.599000,21.981000,11.914000,21.150000,11.611000L20.916000,10.737000C20.869000,10.564000,20.713000,10.442000,20.533000,10.441000ZM3.453000,10.443000C3.278000,10.449000,3.128000,10.569000,3.082000,10.738000L2.849000,11.611000C2.019000,11.914000,1.342000,12.599000,1.096000,13.519000C0.695000,15.013000,1.582000,16.548000,3.076000,16.948000C4.569000,17.348000,6.104000,16.461000,6.504000,14.968000C6.750000,14.048000,6.507000,13.117000,5.939000,12.439000L6.174000,11.566000C6.230000,11.353000,6.103000,11.134000,5.891000,11.077000L3.572000,10.454000C3.533000,10.444000,3.493000,10.440000,3.453000,10.443000ZM10.801000,11.753000C10.579000,11.753000,10.400000,11.932000,10.400000,12.153000L10.400000,13.058000C9.676000,13.566000,9.199000,14.401000,9.199000,15.353000C9.199000,16.900000,10.453000,18.154000,12,18.153000C13.547000,18.154000,14.801000,16.900000,14.801000,15.353000C14.801000,14.401000,14.324000,13.566000,13.600000,13.058000L13.600000,12.153000C13.600000,11.932000,13.420000,11.753000,13.199000,11.753000L10.801000,11.753000Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g><g
+        id="e10ii05mia9y4"><path id="e10ii05mia9y5"
+        d="M2.043000,5.998000L2.043000,6.798000C2.801000,7.181000,3.552000,7.584000,4.340000,7.902000L3.822000,9.834000L6.141000,10.455000L6.649000,8.558000C7.826000,8.833000,9.194000,9.057000,10.844000,9.129000L10.844000,11.103000L13.242000,11.103000L13.242000,9.129000C14.892000,9.057000,16.260000,8.833000,17.438000,8.558000L17.945000,10.455000L20.264000,9.834000L19.746000,7.902000C20.464000,7.627000,21.308000,7.203000,22.043000,6.798000L22.043000,6.098000C22.043000,6.098000,21.154000,6.592000,19.545000,7.207000C17.936000,7.821000,15.469000,8.441000,12.043000,8.441000C8.618000,8.441000,6.150000,7.821000,4.541000,7.207000C2.932000,6.592000,2.043000,5.998000,2.043000,5.998000Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g></svg>';
+        ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -1%
+          - margin-top: 1%
+
+  icon_light_belt:
+    custom_fields:
+      icon: >
+        [[[ if (entity && entity.state && entity.state === 'on') return '<svg id="e8ljwnv7m62d1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#e8ljwnv7m62d2 {
+        animation-name: e8ljwnv7m62d2__tt, e8ljwnv7m62d2_c_o;
+        animation-duration: 1000ms; animation-fill-mode: forwards;
+        animation-timing-function: linear; animation-direction: normal;
+        animation-iteration-count: 1;   }@keyframes e8ljwnv7m62d2__tt { 0%
+        {transform: translate(0px,0px) translate(0px,0px)} 50% {transform:
+        translate(0px,0px) translate(0px,-0.500000px)} 100% {transform:
+        translate(0px,0px) translate(0px,0px)} }@keyframes e8ljwnv7m62d2_c_o {
+        0% {opacity: 0} 100% {opacity: 1} }]]></style><g id="e8ljwnv7m62d2"
+        transform="translate(0,0) translate(0,0)" opacity="0"><path
+        id="e8ljwnv7m62d3"
+        d="M2.164000,2L1,6.346000L20.801000,11.652000L21.449000,9.238000C21.736000,8.168000,21.106000,7.076000,20.035000,6.789000L2.164000,2ZM4.070000,3.572000C4.153000,3.577000,4.237000,3.591000,4.320000,3.613000C4.987000,3.792000,5.384000,4.478000,5.205000,5.145000C5.026000,5.811000,4.341000,6.206000,3.674000,6.027000C3.007000,5.849000,2.610000,5.163000,2.789000,4.496000C2.945000,3.913000,3.490000,3.537000,4.070000,3.572000ZM7.693000,4.543000C7.776000,4.548000,7.860000,4.562000,7.943000,4.584000C8.610000,4.763000,9.005000,5.448000,8.826000,6.115000C8.647000,6.782000,7.962000,7.177000,7.295000,6.998000C6.628000,6.819000,6.233000,6.134000,6.412000,5.467000C6.568000,4.883000,7.113000,4.508000,7.693000,4.543000ZM11.557000,5.578000C11.640000,5.583000,11.723000,5.597000,11.807000,5.619000C12.473000,5.798000,12.870000,6.484000,12.691000,7.150000C12.513000,7.817000,11.827000,8.212000,11.160000,8.033000C10.493000,7.855000,10.097000,7.169000,10.275000,6.502000C10.432000,5.919000,10.976000,5.543000,11.557000,5.578000ZM15.180000,6.549000C15.263000,6.554000,15.346000,6.568000,15.430000,6.590000C16.096000,6.769000,16.491000,7.454000,16.312000,8.121000C16.134000,8.788000,15.448000,9.183000,14.781000,9.004000C14.114000,8.825000,13.720000,8.140000,13.898000,7.473000C14.055000,6.889000,14.599000,6.514000,15.180000,6.549000ZM18.801000,7.520000C18.884000,7.525000,18.967000,7.538000,19.051000,7.561000C19.718000,7.739000,20.114000,8.425000,19.935000,9.092000C19.757000,9.759000,19.071000,10.153000,18.404000,9.975000C17.737000,9.796000,17.341000,9.110000,17.519000,8.443000C17.676000,7.860000,18.220000,7.485000,18.801000,7.520000ZM3.197000,12.348000L2.551000,14.762000C2.264000,15.832000,2.895000,16.924000,3.965000,17.211000L21.836000,22L23,17.654000L3.197000,12.348000ZM5.346000,13.984000C5.429000,13.989000,5.512000,14.003000,5.596000,14.025000C6.262000,14.204000,6.659000,14.890000,6.480000,15.557000C6.302000,16.223000,5.616000,16.618000,4.949000,16.439000C4.282000,16.261000,3.886000,15.575000,4.064000,14.908000C4.221000,14.325000,4.765000,13.950000,5.346000,13.984000ZM8.969000,14.955000C9.052000,14.960000,9.135000,14.974000,9.219000,14.996000C9.885000,15.175000,10.280000,15.861000,10.101000,16.527000C9.923000,17.194000,9.237000,17.589000,8.570000,17.410000C7.903000,17.231000,7.509000,16.546000,7.687000,15.879000C7.844000,15.295000,8.388000,14.920000,8.969000,14.955000ZM12.590000,15.926000C12.673000,15.931000,12.756000,15.944000,12.840000,15.967000C13.507000,16.145000,13.903000,16.831000,13.724000,17.498000C13.546000,18.165000,12.860000,18.560000,12.193000,18.381000C11.526000,18.202000,11.130000,17.516000,11.308000,16.850000C11.465000,16.266000,12.009000,15.891000,12.590000,15.926000ZM16.453000,16.961000C16.536000,16.966000,16.620000,16.980000,16.703000,17.002000C17.370000,17.181000,17.766000,17.866000,17.588000,18.533000C17.409000,19.200000,16.723000,19.595000,16.057000,19.416000C15.390000,19.237000,14.995000,18.552000,15.174000,17.885000C15.330000,17.301000,15.873000,16.926000,16.453000,16.961000ZM20.076000,17.932000C20.159000,17.937000,20.243000,17.950000,20.326000,17.973000C20.993000,18.151000,21.388000,18.837000,21.209000,19.504000C21.030000,20.171000,20.346000,20.565000,19.680000,20.387000C19.013000,20.208000,18.616000,19.522000,18.795000,18.856000C18.951000,18.272000,19.496000,17.897000,20.076000,17.932000Z"
+        fill="rgb(248,205,65)" stroke="none" stroke-width="1"/></g><g
+        id="e8ljwnv7m62d4"><path id="e8ljwnv7m62d5"
+        d="M11.483000,10.234000L5.121000,11.943000L12.637000,13.956000L18.998000,12.247000L11.483000,10.234000Z"
+        fill="rgb(87,168,215)" stroke="none" stroke-width="1"/></g></svg> '
+        ;   else return '<svg id="ei7lu4mye7q1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24"
+        shape-rendering="geometricPrecision"
+        text-rendering="geometricPrecision"><style><![CDATA[#ei7lu4mye7q2 {
+        animation-name: ei7lu4mye7q2__tt, ei7lu4mye7q2_c_o; animation-duration:
+        1000ms; animation-fill-mode: forwards; animation-timing-function:
+        linear; animation-direction: normal; animation-iteration-count: 1;  
+        }@keyframes ei7lu4mye7q2__tt { 0% {transform: translate(0px,0px)
+        translate(0px,0px)} 50% {transform: translate(0px,0px)
+        translate(0px,-0.500000px)} 100% {transform: translate(0px,0px)
+        translate(0px,0px)} }@keyframes ei7lu4mye7q2_c_o { 0% {opacity: 1} 100%
+        {opacity: 0.500000} }]]></style><g id="ei7lu4mye7q2"
+        transform="translate(0,0) translate(0,0)"><path id="ei7lu4mye7q3"
+        d="M2.164000,2L1,6.346000L20.801000,11.652000L21.449000,9.238000C21.736000,8.168000,21.106000,7.076000,20.035000,6.789000L2.164000,2ZM4.070000,3.572000C4.153000,3.577000,4.237000,3.591000,4.320000,3.613000C4.987000,3.792000,5.384000,4.478000,5.205000,5.145000C5.026000,5.811000,4.341000,6.206000,3.674000,6.027000C3.007000,5.849000,2.610000,5.163000,2.789000,4.496000C2.945000,3.913000,3.490000,3.537000,4.070000,3.572000ZM7.693000,4.543000C7.776000,4.548000,7.860000,4.562000,7.943000,4.584000C8.610000,4.763000,9.005000,5.448000,8.826000,6.115000C8.647000,6.782000,7.962000,7.177000,7.295000,6.998000C6.628000,6.819000,6.233000,6.134000,6.412000,5.467000C6.568000,4.883000,7.113000,4.508000,7.693000,4.543000ZM11.557000,5.578000C11.640000,5.583000,11.723000,5.597000,11.807000,5.619000C12.473000,5.798000,12.870000,6.484000,12.691000,7.150000C12.513000,7.817000,11.827000,8.212000,11.160000,8.033000C10.493000,7.855000,10.097000,7.169000,10.275000,6.502000C10.432000,5.919000,10.976000,5.543000,11.557000,5.578000ZM15.180000,6.549000C15.263000,6.554000,15.346000,6.568000,15.430000,6.590000C16.096000,6.769000,16.491000,7.454000,16.312000,8.121000C16.134000,8.788000,15.448000,9.183000,14.781000,9.004000C14.114000,8.825000,13.720000,8.140000,13.898000,7.473000C14.055000,6.889000,14.599000,6.514000,15.180000,6.549000ZM18.801000,7.520000C18.884000,7.525000,18.967000,7.538000,19.051000,7.561000C19.718000,7.739000,20.114000,8.425000,19.935000,9.092000C19.757000,9.759000,19.071000,10.153000,18.404000,9.975000C17.737000,9.796000,17.341000,9.110000,17.519000,8.443000C17.676000,7.860000,18.220000,7.485000,18.801000,7.520000ZM3.197000,12.348000L2.551000,14.762000C2.264000,15.832000,2.895000,16.924000,3.965000,17.211000L21.836000,22L23,17.654000L3.197000,12.348000ZM5.346000,13.984000C5.429000,13.989000,5.512000,14.003000,5.596000,14.025000C6.262000,14.204000,6.659000,14.890000,6.480000,15.557000C6.302000,16.223000,5.616000,16.618000,4.949000,16.439000C4.282000,16.261000,3.886000,15.575000,4.064000,14.908000C4.221000,14.325000,4.765000,13.950000,5.346000,13.984000ZM8.969000,14.955000C9.052000,14.960000,9.135000,14.974000,9.219000,14.996000C9.885000,15.175000,10.280000,15.861000,10.101000,16.527000C9.923000,17.194000,9.237000,17.589000,8.570000,17.410000C7.903000,17.231000,7.509000,16.546000,7.687000,15.879000C7.844000,15.295000,8.388000,14.920000,8.969000,14.955000ZM12.590000,15.926000C12.673000,15.931000,12.756000,15.944000,12.840000,15.967000C13.507000,16.145000,13.903000,16.831000,13.724000,17.498000C13.546000,18.165000,12.860000,18.560000,12.193000,18.381000C11.526000,18.202000,11.130000,17.516000,11.308000,16.850000C11.465000,16.266000,12.009000,15.891000,12.590000,15.926000ZM16.453000,16.961000C16.536000,16.966000,16.620000,16.980000,16.703000,17.002000C17.370000,17.181000,17.766000,17.866000,17.588000,18.533000C17.409000,19.200000,16.723000,19.595000,16.057000,19.416000C15.390000,19.237000,14.995000,18.552000,15.174000,17.885000C15.330000,17.301000,15.873000,16.926000,16.453000,16.961000ZM20.076000,17.932000C20.159000,17.937000,20.243000,17.950000,20.326000,17.973000C20.993000,18.151000,21.388000,18.837000,21.209000,19.504000C21.030000,20.171000,20.346000,20.565000,19.680000,20.387000C19.013000,20.208000,18.616000,19.522000,18.795000,18.856000C18.951000,18.272000,19.496000,17.897000,20.076000,17.932000Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g><g
+        id="ei7lu4mye7q4"><path id="ei7lu4mye7q5"
+        d="M11.483000,10.234000L5.121000,11.943000L12.637000,13.956000L18.998000,12.247000L11.483000,10.234000Z"
+        fill="rgb(157,160,162)" stroke="none" stroke-width="1"/></g></svg>'; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -1%
+          - margin-top: 1%  
+
+
+  icon_plex:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 50 50">
+          <path d="M7.7.3h34.6c4.1 0 7.4 3.3 7.4 7.4v34.6c0 4.1-3.3 7.4-7.4 7.4H7.7c-4.1 0-7.4-3.3-7.4-7.4V7.7C.3 3.6 3.6.3 7.7.3z" fill="#282a2d"/>
+          <path d="M25,7.1H14.6L25,25L14.6,42.9H25L35.4,25L25,7.1z" fill="#e5a00d"/>
+        </svg>
+
+  icon_apple_tv:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 50 50">
+          <path d="M25.2 49.7l-13.7-.1c-2.4 0-4.6-.8-6.5-2.2-2-1.6-3.6-3.6-4.3-6.2-.2-1-.2-1.9-.3-3V11.5C.5 7.9 1.9 5 4.8 2.7 6.2 1.6 7.8.8 9.6.5c.5-.1.9-.1 1.4-.1L27.5.3l10.9.1c2.6 0 4.8.8 6.7 2.4 2.1 1.7 3.7 3.9 4.2 6.6l.2 2.4.1 20.5-.1 6.7c-.1 2.2-.9 4.2-2.2 5.9-1.7 2.2-4 3.8-6.8 4.4-.6.1-1.2.2-1.9.2-.1.1-13.4.2-13.4.2zm-4-27.8c-.9-1.2-2.2-1.6-3.7-1.2-.4.1-.8.2-1.2.4-.3.1-.6.1-.8 0-.4-.1-.8-.3-1.2-.4-.3-.1-.7-.1-1-.1-1.5.2-2.4 1.1-3 2.6-.4 1.1-.3 2.2 0 3.5.4 1.5 1 2.9 2.1 4 .5.6 1.2.9 2 .6 1.1-.5 2.2-.5 3.4 0 .8.3 1.5 0 2.1-.6.7-.8 1.1-1.8 1.6-2.8v-.2c-1-.6-1.7-1.4-1.8-2.7-.2-1.4.5-2.4 1.5-3.1zm9.9-1.4c.1.2.1.3.1.4l3.6 9.5c.1.3.3.4.6.4h.7c.6 0 .6 0 .9-.6l3.7-9.4c.1-.1.1-.3.2-.5H39l-2.9 8.3-3.1-8.3-1.9.2zM27.3 18l-1.3.4c-.5.2-.5.2-.6.7v1.4h-1.6l.1 1.4h1.5v5c0 .7.1 1.4.2 2.1.1.5.3 1 .8 1.4.8.6 2.6.7 3.5.2l-.1-1.2h-1.3c-.5 0-.9-.3-1-.8-.1-.3-.2-.6-.2-1v-5.8H30c0-.5.1-1 0-1.4h-2.7V18zm-8.8-.9c-1.9.3-3 2-2.7 3.2 1.4.2 2.9-1.7 2.7-3.2z"/>
+        </svg>
+
+  icon_spotify:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 50 50">
+          <path d="M25 .3C11.4.3.3 11.4.3 25S11.4 49.7 25 49.7 49.7 38.6 49.7 25 38.6.3 25 .3zm11.3 35.6c-.4.7-1.4 1-2.1.5-5.8-3.5-13.1-4.3-21.7-2.4-.8.2-1.7-.3-1.8-1.2-.2-.8.3-1.7 1.2-1.8 9.4-2.2 17.5-1.2 24 2.8.6.5.9 1.4.4 2.1zm3.1-6.7c-.6.9-1.7 1.2-2.6.6-6.6-4.1-16.8-5.3-24.6-2.9a1.96 1.96 0 0 1-2.4-1.3 1.96 1.96 0 0 1 1.3-2.4c9-2.7 20.1-1.4 27.7 3.3.8.6 1.1 1.8.6 2.7h0zm.2-7c-8-4.7-21.1-5.2-28.7-2.9-1.2.4-2.5-.3-2.9-1.5s.3-2.5 1.5-2.9c8.7-2.6 23.2-2.1 32.4 3.3 1.1.7 1.5 2.1.8 3.2-.6 1.1-2 1.4-3.1.8h0z"/>
+        </svg>
+
+  icon_nest_mini:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 50 50">
+          <path d="M49.7 25c0 13.6-11.1 24.7-24.8 24.7C11.3 49.7.3 38.6.3 25S11.4.3 25 .3 49.7 11.4 49.7 25zm-33.9 0a2.22 2.22 0 0 0-2.2-2.2c-1.2 0-2.3 1-2.3 2.2a2.22 2.22 0 0 0 2.2 2.2c1.3.1 2.3-.9 2.3-2.2h0zm10.8 0c0 1.2.9 2.2 2.2 2.3 1.3 0 2.3-1 2.3-2.2 0-1.3-1-2.3-2.2-2.3-1.3 0-2.3.9-2.3 2.2zm-3.2 0a2.22 2.22 0 0 0-2.2-2.2c-1.2 0-2.3 1-2.3 2.2a2.22 2.22 0 0 0 2.2 2.2c1.3 0 2.3-.9 2.3-2.2h0zm13 2.2a2.22 2.22 0 0 0 2.2-2.2c0-1.2-1-2.3-2.2-2.3a2.22 2.22 0 0 0-2.2 2.2c0 1.3 1 2.3 2.2 2.3z" />
+        </svg>
+
+  icon_play_pause:
+    styles:
+      custom_fields:
+        play_pause:
+          - top: 0
+          - right: 0
+          - bottom: 0
+          - left: 0
+          - margin: auto
+          - width: 21%
+          - height: 21%
+          - position: absolute
+          - fill: '#dedede'
+          - overflow: visible
+          - filter: >
+              [[[
+                return entity && variables.entity_picture
+                  ? 'drop-shadow(0 0 1.3vw rgba(0,0,0,0.7))'
+                  : 'none';
+              ]]]
+    custom_fields:
+      play_pause: >
+        [[[
+          let style = `
+            <style>
+              .scale-up {
+                animation: scale-up 1s forwards;
+                cubic-bezier(.05, .5, .3, 1);
+                transform-origin: center center;
+              }
+              @keyframes scale-up {
+                0% {
+                  opacity: 0;
+                  transform: scale(0);
+                }
+                20% {
+                  transform: scale(1);
+                }
+                30% {
+                  opacity: 1;
+                }
+                80% {
+                  opacity: 1;
+                }
+                100% {
+                  opacity: 0;
+                }
+              }
+            </style>
+          `;
+          if (variables.state === 'paused' && variables.timeout < 2000) {
+            return `
+              <svg viewBox="0 0 166 166">${style}
+                <path class="scale-up" d="M0 0h59.9v166H0zm106.1 0H166v166h-59.9z"/>
+              </svg>
+            `;
+          }
+          if (variables.state === 'playing' && variables.timeout < 2000) {
+            return `
+              <svg viewBox="0 0 166 166">${style}
+                <path class="scale-up" d="M0 0l166 83L0 166z"/>
+              </svg>
+            `;
+          }
+        ]]]
+
+  icon_hue:
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on && variables.timeout < 2000 ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  0% {
+                    transform: scale(0.85);
+                  }
+                  20% {
+                    transform: scale(1.1);
+                  }
+                  40% {
+                    transform: scale(0.95);
+                  }
+                  60% {
+                    transform: scale(1.03);
+                  }
+                  80% {
+                    transform: scale(0.97);
+                  }
+                  100% {
+                    transform: scale(1);
+                  }
+                }
+                .on {
+                  animation: on 0.8s;
+                  transform-origin: center;
+                }
+              </style>
+              <path fill="#9da0a2" d="M27.4 47.3h-4.9s-.7.1-.7.8.4.9.7.9h4.9c.3 0 .7-.1.7-.9s-.7-.8-.7-.8zm3.3-2.9H19.3s-.8 0-.8.8.6.9.8.9h11.5c.2 0 .8-.1.8-.9-.1-.8-.9-.8-.9-.8zm0-3H19.3s-.8 0-.8.8.6.9.8.9h11.5c.2 0 .8-.1.8-.9-.1-.8-.9-.8-.9-.8zm0-2.9H19.3s-.8 0-.8.8.6.9.8.9h11.5c.2 0 .8-.1.8-.9s-.9-.8-.9-.8zm5.2-23.2c-3.3-5.3-7-5.6-10.9-5.6-3.8 0-8.4.4-10.9 5.6-.1.1-.1.3.1.7.4.8 3.3 7.2 3.2 18.8 0 1.1-.1 1.6 0 1.7 0 .1 0 .7 1.1.7h13c1 0 1-.5 1.1-.7v-1.7c-.1-11.6 2.8-18 3.2-18.8.1-.4.1-.5.1-.7"/>
+              <path class="${state}" fill="var(--light-color)" d="M14.1 15.3c3.4-.3 7-.4 10.9-.4 3.8 0 7.5.2 10.9.4.4-.4.7-.8.9-1.1C39 8.5 38.9 6.5 38.9 6c-.2-4.4-8.4-5-12.1-5h0-3.4c-3.7 0-12 .5-12.1 5 0 .5-.1 2.5 2.1 8.2 0 .3.3.8.7 1.1z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_shade:
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -15%
+          - margin-top: 1%
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on && variables.timeout < 2000 ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  0% {
+                    transform: scale(0.85);
+                  }
+                  20% {
+                    transform: scale(1.1);
+                  }
+                  40% {
+                    transform: scale(0.95);
+                  }
+                  60% {
+                    transform: scale(1.03);
+                  }
+                  80% {
+                    transform: scale(0.97);
+                  }
+                  100% {
+                    transform: scale(1);
+                  }
+                }
+                .on {
+                  animation: on 0.8s;
+                  transform-origin: center;
+                }
+              </style>
+              <path fill="#9da0a2" d="M26.4 25.6c.6-.3 1.1-.7 1.1-1.3L25 17.9l-2.5 6.4c0 .7.6 1.1 1.1 1.3v20.8h-5.5v2.7h13.7v-2.7h-5.5V25.6z"/>
+              <path class="${state}" fill="var(--light-color)" d="M24.6.9l-9.4.5c-.6.1-1.9 0-2.5 2.1s-2.4 9.1-4 16.9c-.2.7-.5 2-.5 2.3s-.4 1.6.9 1.6c.8.1 7.4.3 15.9.3 8.6 0 15.1-.3 15.9-.3 1.3-.1.9-1.3.9-1.6s-.3-1.6-.5-2.3c-1.6-7.8-3.4-14.8-4-16.9s-1.9-2-2.5-2.1c-1.6-.2-6.9-.4-9.4-.5"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_tv:
+    styles:
+      custom_fields:
+        icon:
+          - width: 87%
+          - margin-top: -8%
+          - fill: >
+              [[[
+                return variables.state_on ? '#616161' : '#9da0a2';
+              ]]]
+    custom_fields:
+      icon: >
+        [[[
+          let style = `
+            <style>
+              @keyframes on {
+                from {
+                  transform: scaleY(0);
+                }
+                to {
+                  transform: scaleY(1);
+                }
+              }
+              .on {
+                animation: on 1s;
+                transform-origin: -100% 46%;
+                animation-fill-mode: forwards;
+              }
+              @keyframes off {
+                from {
+                  transform: scaleY(1);
+                }
+                to {
+                  transform: scaleY(0);
+                }
+              }
+              .off {
+                animation: off 1s;
+                transform-origin: -100% 46%;
+                animation-fill-mode: forwards;
+              }
+            </style>
+          `,
+            path = `
+              <path d="M46 9.2v27.5H4.1V9.2H46m2.4-2.4H1.6v32.3h46.7c.1 0 .1-32.3.1-32.3zM11.9 43.2h26.3c.6 0 1.1-.4 1.1-1v-.3c0-.6-.4-1.1-1-1.1H11.9c-.6 0-1.1.4-1.1 1v.3a1.11 1.11 0 0 0 1.1 1.1z"/>
+            `,
+            gradient = `
+              <linearGradient id="A" gradientUnits="userSpaceOnUse" x1="5.401" y1="34.714" x2="43.817" y2="11.74">
+                <stop offset="0" stop-color="#64acb7"/>
+                <stop offset="1" stop-color="#7fdbe9"/>
+              </linearGradient>
+            `;
+          if (variables.state_on && variables.timeout < 2000) {
+            return `
+              <svg viewBox="0 0 50 50"> ${style} ${gradient} 
+                <path d="M2.9,8h44.3v29.9H2.9V8z" fill="#20262890"/>
+                <path class="on" d="M2.9,8h44.3v29.9H2.9V8z" fill="url(#A)"/> ${path} 
+              </svg>
+            `;
+          }
+          if (variables.state_on && variables.timeout > 2000) {
+            return `
+              <svg viewBox="0 0 50 50"> ${gradient} 
+                <path d="M2.9,8h44.3v29.9H2.9V8z" fill="#20262890"/>
+                <path class="on" d="M2.9,8h44.3v29.9H2.9V8z" fill="url(#A)"/> ${path} 
+              </svg>
+            `;
+          }
+          if (variables.state === 'off' && variables.timeout < 2000) {
+            return `
+              <svg viewBox="0 0 50 50"> ${style} ${gradient} 
+                <path class="off" d="M2.9,8h44.3v29.9H2.9V8z" fill="url(#A)"/> ${path} 
+              </svg>
+            `;
+          } else {
+            return `
+              <svg viewBox="0 0 50 50"> ${style} 
+                ${path}
+              </svg>
+            `;
+          }
+        ]]]
+
+  icon_ps5:
+    styles:
+      custom_fields:
+        icon:
+          - width: 89%
+          - margin-left: -2%
+          - margin-top: -9%
+    custom_fields:
+      icon: >
+        [[[
+          if (variables.state_on && variables.timeout < 2000) {
+            return `
+              <svg viewBox="0 0 50 50">
+                <style>
+                @keyframes on {
+                  50% {
+                    transform: translateY(0);
+                  }
+                  100% {
+                    transform: translateY(-45%);
+                  }
+                }
+                .on {
+                  animation: on 2s cubic-bezier(0.550, 0.085, 0.680, 0.530) both;
+                }
+              </style>
+              <g style="clip-path: url(#mask);">
+                <g class="on">
+                  <path fill="#00aa9e" d="M49.2 38.9l-75.6-25.1v7.4l75.6 25.2z"/>
+                  <path fill="#f3c202" d="M49.2 46.4l-75.6-25.2v7.5l75.6 25.1z"/>
+                  <path fill="#326db3" d="M49.2 53.8l-75.6-25.1V51l75.6 25.1zm0-22.3L-26.4 6.4v7.4l75.6 25.1z"/>
+                </g>
+              </g>
+              <defs>
+                <clipPath id="mask">
+                  <path d="M47.5 33.2c-.5-2.2-3.9-3.5-9.1-3.9-3.8-.3-7.5.6-11.1 1.9l-.6.2v-5.7l-5.7.8-4.6 1.6L6 31.9h-.1c-1.9.7-3.8 2.2-3.7 4.2.1 2.1 4.7 2.6 8.2 3.2 3.3.6 6.2.2 8.9-.7l7.3 4.8L33 41l10.7-4h.1c2.8-1 4-2.5 3.7-3.8zm-31.3 2l-3.6 1.3c-2.2.8-4.1-1.1-2.1-1.9l1.7-.6 7.2-2.7v2.8l-3.2 1.1zm22.5-1.1l-1.9.7-10.2 3.7V36l6.5-2.4 3.8-1.3c4-.9 5.6.5 1.8 1.8z"/>
+                </clipPath>
+              </defs>
+              <path fill="#de0029" d="M26.7 14.6v28.7l-7.3-2.5V7.1l9.3 2.6c6 1.7 9.6 5 9.6 10.7-.1 6.7-3 9.4-8.7 7.6V14.9c-.1-1.6-2.9-1.7-2.9-.3h0z"/>
+            </svg>
+          `;
+          }
+
+          return variables.state_on && variables.timeout > 2000 ? `
+            <svg viewBox="0 0 50 50">
+            <g style="clip-path: url(#mask);">
+              <g style="transform: translateY(-45%);">
+                <path fill="#00aa9e" d="M49.2 38.9l-75.6-25.1v7.4l75.6 25.2z"/>
+                <path fill="#f3c202" d="M49.2 46.4l-75.6-25.2v7.5l75.6 25.1z"/>
+                <path fill="#326db3" d="M49.2 53.8l-75.6-25.1V51l75.6 25.1zm0-22.3L-26.4 6.4v7.4l75.6 25.1z"/>
+              </g>
+            </g>
+            <defs>
+              <clipPath id="mask">
+                <path d="M47.5 33.2c-.5-2.2-3.9-3.5-9.1-3.9-3.8-.3-7.5.6-11.1 1.9l-.6.2v-5.7l-5.7.8-4.6 1.6L6 31.9h-.1c-1.9.7-3.8 2.2-3.7 4.2.1 2.1 4.7 2.6 8.2 3.2 3.3.6 6.2.2 8.9-.7l7.3 4.8L33 41l10.7-4h.1c2.8-1 4-2.5 3.7-3.8zm-31.3 2l-3.6 1.3c-2.2.8-4.1-1.1-2.1-1.9l1.7-.6 7.2-2.7v2.8l-3.2 1.1zm22.5-1.1l-1.9.7-10.2 3.7V36l6.5-2.4 3.8-1.3c4-.9 5.6.5 1.8 1.8z"/>
+              </clipPath>
+            </defs>
+            <path fill="#de0029" d="M26.7 14.6v28.7l-7.3-2.5V7.1l9.3 2.6c6 1.7 9.6 5 9.6 10.7-.1 6.7-3 9.4-8.7 7.6V14.9c-.1-1.6-2.9-1.7-2.9-.3h0z"/>
+          </svg>
+          ` : `
+            <svg viewBox="0 0 50 50">
+              <path fill="#9da0a2" d="M43.8 37h-.1l-10.6 4-4.2 1.6v-4.9l8-2.9 1.9-.7c3.8-1.3 2.2-2.7-1.8-1.9l-3.8 1.3-4.3 1.6v-4.5c3.1-1 6.3-1.6 9.5-1.4 5.3.4 8.7 1.6 9.1 3.9.3 1.4-.9 2.9-3.7 3.9zm-26.7-2.1l-.9.3-3.6 1.3c-2.2.8-4.1-1.1-2.1-1.9l1.7-.6 5-1.9v-4.2l-.6.2L6 31.9h-.1c-1.9.7-3.8 2.2-3.7 4.2.1 2.1 4.7 2.6 8.2 3.2 2.4.4 4.6.3 6.7-.1v-4.3zm12.4-20V28c5.7 1.7 8.7-.9 8.7-7.6.1-5.7-3.6-9-9.6-10.7l-9.3-2.6v33.8l7.2 2.5.1.1V14.6c.1-1.4 2.9-1.3 2.9.3z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_spot:
+    styles:
+      custom_fields:
+        icon:
+          - width: 74%
+          - margin-left: -8%
+          - margin-top: 3%
+    custom_fields:
+      icon: >
+        [[[
+          let state;
+          if (variables.state_on && variables.timeout < 2000) {
+            state = 'on';
+          } 
+          if (variables.state === 'off' && variables.timeout < 2000) {
+            state = 'off';
+          }
+          if (variables.state_on && variables.timeout > 2000) {
+            state = 'on_timeout';
+          }
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  0% {
+                    transform: rotateZ(0deg);
+                    animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0);
+                  }
+                  70% {
+                    transform: rotateZ(-15deg);
+                    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+                  }
+                  75% {
+                    transform: rotateZ(-15deg);
+                    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+                  }
+                  88% {
+                    transform: rotateZ(-11deg);
+                  }
+                  100% {
+                    transform: rotateZ(-15deg);
+                  }
+                }
+                @keyframes off {
+                  0% {
+                    transform: rotateZ(-15deg);
+                    animation-timing-function: cubic-bezier(0.7, 0, 0.84, 0);
+                  }
+                  70% {
+                    transform: rotateZ(0deg);
+                    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+                  }
+                  75% {
+                    transform: rotateZ(0deg);
+                    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+                  }
+                  88% {
+                    transform: rotateZ(-4deg);
+                  }
+                  100% {
+                    transform: rotateZ(0deg);
+                  }
+                }
+                .on {
+                  animation: on 0.7s;
+                  transform-origin: 40% 20%;
+                  animation-fill-mode: forwards;
+                  animation-delay: -0.1s;
+                }
+                .off {
+                  animation: off 0.7s;
+                  transform-origin: 40% 20%;
+                  animation-fill-mode: forwards;
+                }
+                .on_timeout {
+                  transform: rotateZ(-15deg);
+                  transform-origin: 40% 20%;
+                }
+              </style>
+              <path style="clip-path: url(#mask);" fill="#9da0a2" d="M40.5.8H17.1c-.1 0-.1 0-.1.1A3.12 3.12 0 0 0 20.1 4h6.1c.1 0 .1 0 .1.1v7.4L18 19.1l3.6 3.5 9.1-8.6c.4-.4.6-1 .7-1.6V4c0-.1 0-.1.1-.1h6c1.7.1 3.1-1.3 3-3.1z"/>
+              <defs>
+                <clipPath id="mask">
+                  <path class="${state}" d="M0 9.1h24l8.3 8.8H50V-9H0z"/>
+                </clipPath>
+              </defs>
+              <path class="${state}" fill="var(--light-color)" d="M25.5 46.4s1.4.5 10.4-8.2c.5-.4 6.3-6.3 5.8-7.1-.7-.8-18.6-19.5-18.6-19.5s-.6-.9-8.6 6.4c-.6.5-8.7 8-7.7 9.1l18.7 19.3z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_imac:
+    styles:
+      custom_fields:
+        icon:
+          - width: 80%
+          - margin-left: 1%
+          - margin-top: -5%
+          - fill: >
+              [[[ return variables.state_on ? '#72757c' : '#9da0a2'; ]]]
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on && variables.timeout < 2000 ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  from {
+                    opacity: 0.5;
+                    transform: scale(0.6);
+                  }
+                  100% {
+                    opacity: 1;
+                  }
+                }
+                .on {
+                  animation: on 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+                  transform-origin: center;
+                }
+              </style>
+              <path class="${state}" d="M31.9 44.5c-1-.3-1.9.4-1.9-3.7h-9.9c0 4.2-.9 3.4-1.9 3.7s-.2.7-.2.7h14.1s.8-.3-.2-.7zM47.6 4.8H2.5c-1.1 0-2 .9-2 2v30.1c0 1.1.9 2 2 2h45c1.1 0 2-.9 2-2v-30a1.95 1.95 0 0 0-1.9-2.1zm-.7 26.4H3.2V7.6H47v23.6z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_monitors:
+    styles:
+      custom_fields:
+        icon:
+          - width: 73%
+          - margin-left: -9%
+    custom_fields:
+      icon: >
+        [[[
+          let style = `
+            <style>
+              @keyframes cone {
+                35% {
+                  transform: scale(0.8);
+                  animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+                }
+                36% {
+                  transform: translateY(0%);
+                }
+                49% {
+                  transform: scale(1.25);
+                }
+                63% {
+                  transform: scale(0.85);
+                  animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+                }
+                77% {
+                  transform: scale(1.15);
+                  animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+                }
+                95% {
+                  transform: scale(1);
+                }
+              }
+              .cone {
+                animation: cone 1.2s;
+                transform-origin: center;
+              }
+              @keyframes speaker {
+                0% {
+                  transform: scale(1);
+                }
+                40% {
+                  transform: scale(1);
+                }
+                49% {
+                  transform: scale(0.95);
+                }
+                63% {
+                  transform: scale(1);
+                }
+                77% {
+                  transform: scale(0.95);
+                }
+                100% {
+                  transform: scale(1);
+                }
+              }
+              .speaker {
+                animation: speaker 1.3s;
+                transform-origin: center;
+              }
+            </style>
+          `,
+            paths = `
+              <g class="speaker">
+                <path fill="#686868" d="M35.8 46.9H14.2c-1.1 0-2-1-2-2.3V6.7c0-1.3.9-2.3 2-2.3h21.5c1.1 0 2 1 2 2.3v37.9c0 1.2-.9 2.3-1.9 2.3z"/>
+                <path fill="#2a2a2a" d="M39.2 1H10.8C9.4 1 8.3 2.1 8.2 3.5v42.9a2.65 2.65 0 0 0 2.6 2.6h28.3c1.4 0 2.5-1.2 2.6-2.6V3.5c0-1.4-1.1-2.5-2.5-2.5zM25 7c1.3 0 2.4 1.1 2.4 2.4s-1.1 2.4-2.4 2.4-2.4-1.1-2.4-2.4C22.5 8 23.6 7 25 7zm10.2 35.5l-.4 1.9s-.2.6-.6.6H15.8c-.4 0-.6-.6-.6-.6s-.1-1.1-.4-1.9.6-.9.6-.9h19.3c0-.1.8-.1.5.9z"/>
+              </g>
+              <path class="cone" fill="#e5dd00" d="M25 15.7c-6.2 0-11.3 5.1-11.3 11.3S18.8 38.3 25 38.3 36.3 33.2 36.3 27c-.1-6.3-5.1-11.3-11.3-11.3zm0 14.5a3.33 3.33 0 0 1-3.3-3.3 3.33 3.33 0 0 1 3.3-3.3 3.33 3.33 0 0 1 3.3 3.3c-.1 1.9-1.5 3.3-3.3 3.3z"/>
+            `;
+          if (variables.state_on && variables.timeout < 2000) {
+          return `
+            <svg viewBox="0 0 50 50">
+              ${style}
+              ${paths}
+            </svg>
+          `;
+          }
+
+          return variables.state_on && variables.timeout > 2000 ? `
+            <svg viewBox="0 0 50 50">
+              ${paths}
+            </svg>
+          ` : `
+            <svg viewBox="0 0 50 50">
+              <path fill="#9da0a2" d="M25 18.6c-4.6 0-8.4 3.8-8.4 8.4s3.8 8.4 8.4 8.4 8.4-3.8 8.4-8.4-3.7-8.4-8.4-8.4zm0 11.7a3.33 3.33 0 0 1-3.3-3.3 3.33 3.33 0 0 1 3.3-3.3 3.33 3.33 0 0 1 3.3 3.3c0 1.8-1.4 3.3-3.3 3.3zM39.2 1H10.9C9.4 1 8.3 2.1 8.3 3.6v42.9a2.65 2.65 0 0 0 2.6 2.6h28.3a2.65 2.65 0 0 0 2.6-2.6v-43C41.7 2 40.5.9 39.2 1zM25 7c1.3 0 2.4 1.1 2.4 2.4s-1.1 2.4-2.4 2.4-2.4-1.1-2.4-2.4S23.7 7 25 7zm10.3 35.5l-.4 1.9s-.2.6-.6.6H15.8c-.4 0-.6-.6-.6-.6l-.4-1.9c-.2-.9.6-.9.6-.9h19.3s.9.1.6.9zM25 38.2c-6.2 0-11.3-5.1-11.3-11.3a11.29 11.29 0 1 1 22.6 0c.1 6.3-5 11.3-11.3 11.3z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_lamp:
+    styles:
+      custom_fields:
+        icon:
+          - width: 79%
+          - margin-left: -16%
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on && variables.timeout < 2000 ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  0% {
+                    transform: scale(0.85);
+                  }
+                  20% {
+                    transform: scale(1.1);
+                  }
+                  40% {
+                    transform: scale(0.95);
+                  }
+                  60% {
+                    transform: scale(1.03);
+                  }
+                  80% {
+                    transform: scale(0.97);
+                  }
+                }
+                .on {
+                  animation: on 0.8s;
+                  transform-origin: center;
+                }
+              </style>
+              <path fill="#9da0a2" d="M26.5 21.8l3.8-6.1H19.7l3.8 6.1c-5 .7-6.3 5.8-5.7 10.2.7 5.1 3.2 10.1 5.7 14.4H19v2.5h11.8v-2.5h-4.5C29 42 31.4 37 32.1 32c.6-4.4-.6-9.4-5.6-10.2zm3.1 9.1c-.3 4.3-2.3 8.7-4.4 12.4l-.2.1v.1-.1c-1.8-3-3.3-6.4-4.1-9.7-.7-3.1-1-7.2 2.7-8.4 1.4-.5 3.1-.1 4.2.8 1.6 1 1.8 3 1.8 4.8z"/>
+              <path class="${state}" fill="var(--light-color)" d="M38.1 20L35.7 3.8c-.3-1.9-.4-1.7-.6-2-.9-.6-2.3-.7-2.3-.7H17.4s-1.4 0-2.3.7c-.2.3-.3.1-.6 2C14 5.7 11.9 20 11.9 20s5.8.3 13.4.3h0c7.3 0 12.8-.3 12.8-.3z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_bathroom:
+    styles:
+      custom_fields:
+        icon:
+          - width: 78%
+          - margin-left: -10%
+    custom_fields:
+      icon: >
+        [[[
+          let state;
+          if (variables.state_on && variables.timeout < 2000) {
+            state = 'on';
+          } 
+          if (variables.state === 'off' && variables.timeout < 2000) {
+            state = 'off';
+          }
+          if (variables.state_on && variables.timeout > 2000) {
+            state = 'on_timeout';
+          }
+          return `
+            <svg viewBox="0 0 50 50" fill="var(--light-color)">
+              <style>
+                @keyframes on {
+                  0% {
+                    transform: rotateZ(0deg) translate(0%, 0%);
+                  }
+                  100% {
+                    transform: rotateZ(-90deg) translate(-1.5%, 0%);
+                  }
+                }
+                @keyframes off {
+                  0% {
+                    transform: rotateZ(-90deg) translate(-1.5%, 0%);
+                  }
+                  45% {
+                    transform: rotateZ(-40deg);
+                  }
+                  55% {
+                    transform: rotateZ(0deg);
+                  }
+                  65% {
+                    transform: rotateZ(-15deg);
+                  }
+                  75% {
+                    transform: rotateZ(0deg);
+                  }
+                  85% {
+                    transform: rotateZ(-5deg);
+                  }
+                  95% {
+                    transform: rotateZ(0deg);
+                  }
+                }
+                .on {
+                  animation: on 0.45s;
+                  animation-fill-mode: forwards;
+                  transform-origin: 45% 41%;
+                  transition-timing-function: cubic-bezier(0.85, 0, 0.15, 1);
+                }
+                .on_timeout {
+                  transform: rotateZ(-90deg) translate(-1.5%, 0%);
+                  transform-origin: 45% 41%;
+                }
+                .off {
+                  animation: off 1.1s linear;
+                  animation-delay: 0.05s;
+                  animation-fill-mode: both;
+                  transform-origin: 45% 41%;
+                }
+              </style>
+              <path d="M12.9 1.2h2.5c1.6 0 2.9 1.3 2.9 2.9v18.6c0 1.4 1.1 2.5 2.4 2.5h20.5c.5 0 1 .4.9 1-.1 2.6-1.2 9.6-10.2 11v7.6c0 .2.2.4.4.4h1.5a1.58 1.58 0 0 1 1.6 1.6v.3a1.58 1.58 0 0 1-1.6 1.6H11a1.58 1.58 0 0 1-1.6-1.6v-.3a1.58 1.58 0 0 1 1.6-1.6h1.6c.2 0 .4-.2.4-.4v-7.6s-5.2-.3-5.2-5.9V4.2c0-1.6 1.3-2.9 2.9-2.9l2.2-.1c0 .1 0 0 0 0z"/>
+              <path class="${state}" d="M22.3 18.8h18.3a1.58 1.58 0 0 1 1.6 1.6v.6a1.58 1.58 0 0 1-1.6 1.6h-19c-.4 0-.7-.3-.8-.7v-2.3c0-.4.3-.7.7-.8h.8z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_fan:
+    styles:
+      custom_fields:
+        icon:
+          - width: 75%
+          - margin-left: -3%
+    custom_fields:
+      icon: >
+        [[[
+          let path = `
+            <circle cx="25" cy="25" r="6.6"/>
+            <path d="M31.9 30.4c-.5.6-1.1 1.1-1.7 1.5-1.4 1.1-3.2 1.7-5.2 1.7-2.3 0-4.5-.9-6-2.4-.9 1.1-1.6 2.3-2.3 3.2l-4.9 5.4c-1.8 2.7.3 5.6 2.5 7 3.9 2.4 9.8 3.1 14.1 1.9 4.6-1.3 7.9-4.7 7.4-9.7-.2-3.4-1.9-6-3.9-8.6zM17 28.3c-.4-1-.6-2.1-.6-3.3a8.7 8.7 0 0 1 6.4-8.4l-1.6-3.5L19 6.2c-1.5-2.8-5-2.5-7.3-1.2-4 2.2-7.5 6.9-8.7 11.3-1.2 4.6.2 9.2 4.7 11.3 3.1 1.3 6.1 1.2 9.3.7zm26.9-17.6c-3.3-3.4-8-4.6-12.1-1.8-2.8 1.8-4.2 4.6-5.5 7.5 4.2.6 7.4 4.2 7.4 8.6 0 .9-.1 1.7-.4 2.5 1.3.2 2.8.3 3.8.4 2.3.4 4.7 1.3 7.1 1.7 3.2.3 4.7-3 4.8-5.6.3-4.6-1.9-10.1-5.1-13.3z"/>
+          `,
+          style = `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes rotate {
+                  0% {
+                    visibility: visible;
+                    transform: rotate(0deg) translateZ(0);
+                  }
+                  100% {
+                    transform: rotate(1080deg) translateZ(0);
+                  }
+                }
+                .start {
+                  animation: rotate 2.8s ease-in;
+                  transform-origin: center;
+                  fill: #5daeea;
+                  visibility: hidden;
+                  will-change: transform;
+                }
+                .on {
+                  animation: rotate 1.8s linear infinite;
+                  transform-origin: center;
+                  fill: #5daeea;
+                  animation-delay: 2.8s;
+                  visibility: hidden;
+                  will-change: transform;
+                }
+                .end {
+                  animation: rotate 2.8s;
+                  transform-origin: center;
+                  fill: #9ca2a5;
+                  animation-timing-function: cubic-bezier(0.61, 1, 0.88, 1);
+                  will-change: transform;
+                }
+                .start_timeout {
+                  animation: rotate 1.8s linear infinite;
+                  transform-origin: center;
+                  fill: #5daeea;
+                  visibility: hidden;
+                  will-change: transform;
+                }
+                .end_timeout {
+                  fill: #9ca2a5;
+                }
+              </style>
+          `;
+          if (variables.state_on && variables.timeout < 2000) {
+            return `${style}<g class="start">${path}</g><g class="on">${path}</g></svg>`;
+          }
+          if (variables.state === 'off' && variables.timeout < 2000) {
+            return `${style}<g class="end">${path}</g></svg>`;
+          }
+          if (variables.state_on && variables.timeout > 2000) {
+            return `${style}<g class="start_timeout">${path}</g></svg>`;
+          } else {
+            return `${style}<g class="end_timeout">${path}</g></svg>`;
+          }
+        ]]]
+
+  icon_closet:
+    styles:
+      custom_fields:
+        icon:
+          - width: 80%
+          - margin-left: -16%
+    custom_fields:
+      icon: >
+        [[[
+          let room = `d="M11.4,1.4h27.2v43.1H11.4V1.4z" fill="#bcbcbc"`,
+            door = `d="M11.4 1.4v43.1h27.2V1.4H11.4zm23 23.4c0 1.1-.9 1.9-1.9 1.9h0c-1.1 0-1.9-.9-1.9-1.9V21c0-1.1.9-1.9 1.9-1.9h0c1.1 0 1.9.9 1.9 1.9v3.8z"`;
+
+          if (variables.state_on && variables.timeout < 2000) {
+            return `
+              <style>
+                .state {
+                  animation: state 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+                }
+                .opacity {
+                  animation: opacity 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+                }
+                @keyframes state {
+                  0% {
+                    transform: none;
+                    fill: #9da0a2;
+                  }
+                  100% {
+                    transform: skewY(10deg) translate(4.5%, -3.9%) scaleX(0.8);
+                    fill: #b68349;
+                  }
+                }
+                @keyframes opacity {
+                  0% {
+                    opacity: 0;
+                  }
+                  100% {
+                    opacity: 1;
+                  }
+                }
+              </style>
+              <svg viewBox="0 0 50 50">
+                <path class="opacity" ${room}/>
+                <path class="state" ${door}/>
+              </svg>
+            `;
+          }
+
+          if (variables.state_on && variables.timeout > 2000) {
+            return `
+              <svg viewBox="0 0 50 50">
+                <style>
+                  .state_timeout_on {
+                    transform: skewY(10deg) translate(4.5%, -3.9%) scaleX(0.8);
+                    fill: #b68349;
+                  }
+                </style>
+                <path ${room}/>
+                <path class="state_timeout_on" ${door}/>
+              </svg>
+            `;
+          }
+
+          return variables.state === 'off' && variables.timeout < 2000 ? `
+            <style>
+              .state {
+                animation: state 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+              }
+              .opacity {
+                animation: opacity 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+              }
+              .reverse {
+                animation-direction: reverse;
+              }
+              @keyframes state {
+                0% {
+                  transform: none;
+                  fill: #9da0a2;
+                }
+                100% {
+                  transform: skewY(10deg) translate(4.5%, -3.9%) scaleX(0.8);
+                  fill: #b68349;
+                }
+              }
+              @keyframes opacity {
+                0% {
+                  opacity: 0;
+                }
+                100% {
+                  opacity: 1;
+                }
+              }
+            </style>
+            <svg viewBox="0 0 50 50">
+              <path class="opacity reverse" ${room}/>
+              <path class="state reverse" ${door}/>
+            </svg>
+          ` : `
+            <svg viewBox="0 0 50 50">
+              <style>
+                .state_timeout_off {
+                  fill: var(--state-icon-color);
+                }
+              </style>
+              <path class="state_timeout_off" ${door}/>
+            </svg>
+          `;
+        ]]]
+
+  icon_away:
+    state_display: Auto
+    styles:
+      card:
+        - transition: all 0.3s ease-out
+      custom_fields:
+        icon:
+          - width: 79%
+          - margin-left: -1%
+          - margin-top: -1%
+          - fill: >
+              [[[ return variables.state_on ? '#516d82' : '#9da0a2'; ]]]
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  10%,
+                  20%,
+                  100% {
+                    transform: rotateZ(0deg);
+                  }
+                  30%,
+                  50%,
+                  70% {
+                    transform: rotateZ(7deg);
+                  }
+                  90% {
+                    transform: rotateZ(3deg);
+                  }
+                  40%,
+                  60%,
+                  80% {
+                    transform: rotateZ(-7deg);
+                  }
+                }
+                .on {
+                  animation: on 1.35s cubic-bezier(0.5, 1, 0.89, 1);
+                  animation-fill-mode: both;
+                  transform-origin: 70% 80%;
+                  animation-delay: 0s;
+                }
+              </style>
+              <path class="${state}" d="M32.1 18.4s.3-1.6.7-2.1c.3-.6.9-1.4 1.6-1.8.6-.4 1.1-.7 1.4-.7s.7-.1 1 .1.6.4.8 1.3l.3 2.7.1 2.4.2 4.1c0 .3.2 3.1.2 3.3s.2 2.7.2 3.2l-.1 2.5c.1 1.6.5 3.1-.2 4.6-.6 1.4-1.7 2.7-2.9 3.6-.5.4-1.9 1.3-2.9 1.7-1.1.5-2.2.8-3.3 1.1-.5.1-1.4.4-2.3.3s-1.8-.6-2.1-1l-1.6-2.3c-.6-.8-2.1-2.3-2.3-2.5l-2.7-2.8c-.2-.2-2.7-3.5-2.9-3.8l-3.1-4.7-1.8-3.2-1.5-2.8-.9-1.8c-.1-.2-.3-1.1-.2-1.4.3-1.2 1.4-1.4 2.3-.7.3.2.9 1 1.1 1.3s6.1 8.1 6.1 8.1c.2.3.7.3.9 0s-.1-.7-.2-.9c-.4-.6-8.3-11.5-8.3-11.5s-.6-.9-.7-1.1c-.3-1.1 0-2.3 1.1-2.7s1.9.3 2.6 1.1c.3.3 8.3 11.5 8.3 11.5.2.2.3.3.5.3.3 0 .5-.4.4-.7-.1-.2-.5-.9-.5-.9L11.8 9c-.6-1-.9-2-.1-3 .7-.8 2.2-1.3 3-.2.3.3 10.1 14.3 10.1 14.3.2.2.5.4.7.3.5-.1.3-.7.1-1-.1-.2-8.4-11.8-8.4-11.8-.4-.9-.6-2 .2-2.8 1-1.1 2.5-.5 3.3.5.2.3 1 1.4 1 1.4l2.7 3.7c.1.2 3.4 4.4 3.8 4.8.9 1.1 1.8 2.2 2.7 3.2l.5.5c.1.1.1.4.1.8 0 1.3.1 2.6.1 3.9 0 .2.1.4.2.6.3.3.6.1.7-.2.1-.2 0-2.4 0-2.7-.3-.3-.5-1.3-.4-2.9zM12.2 46.9s-2.8-.8-4.8-2.7-2.6-2.7-2.8-3-1.8-3-2-3.6c-.2-.5-.2-.7.2-1 .4-.4 1-.5 1.3.1.1.2.4 1 .5 1.2s1 1.9 1.7 2.8 1.6 2.2 4.4 3.8c.6.3 1.2.6 1.9.9.3.1.6.2.8.4.1.2.1.6-.1.8-.2.4-.7.4-1.1.3zM7.1 30.7l.9 3.1c.3.7 1.1 2.3 1.9 3.3s2.4 2.6 3.4 3.2 2 1.1 3 1.5c1 .3 1.1.4 1.2.5.3.4.2 1.2-.4 1.3-.2 0-1.2 0-1.8-.3L12 41.7c-.5-.4-3.9-3.1-5.1-6S5.3 31 5.2 30.4s-.2-1.1 0-1.4c.3-.4.9-.8 1.3-.3.2.3.3.6.3.9.1 0 .2.8.3 1.1zm26.8-25s.2-.1.5-.1.8.3 1.4.7 1.9 1 3.6 2.9 2.9 3.9 3.4 5.8c.5 1.8.8 3.1.9 5.5 0 .5.1 1.6 0 1.7-.2.5-.5.7-1 .7-.6 0-.7-.5-.7-1l-.1-2.9c-.1-.6-.3-1.9-.7-2.9-.3-1-.7-2.3-1.7-3.6-.9-1.3-2.1-2.8-3.2-3.5l-2.4-1.5c-.6-.6-.7-1.2 0-1.8zm4.9-2.5s.3-.2.5-.1c.2 0 .7.3.9.4s2.1 1.3 3.6 3c1.5 1.6 3.5 5.1 3.7 7.4.1.4.2.9 0 1-.2.2-.4.4-.7.4-.2 0-.5 0-.7-.1-.1-.2-.4-1.1-.4-1.3s-.6-2-1.1-3.1C44 9.7 43.5 8.5 42 7.1s-2.2-1.9-2.8-2.2-1.1-.6-1.1-1c.1-.3.3-.6.7-.7z"/>
+            </svg>
+          `;
+        ]]]
+
+  icon_home:
+    state_display: Auto
+    styles:
+      card:
+        - transition: all 0.3s ease-out
+      custom_fields:
+        icon:
+          - width: 72%
+          - margin-left: -1%
+          - fill: >
+              [[[ return variables.state_on ? '#c7983e' : '#9da0a2'; ]]]
+    custom_fields:
+      icon: >
+        [[[
+          let state = variables.state_on ? 'on' : null;
+          return `
+            <svg viewBox="0 0 50 50">
+              <style>
+                @keyframes on {
+                  from,
+                  20%,
+                  40%,
+                  60%,
+                  80%,
+                  to {
+                    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+                  }
+                  0% {
+                    transform: scale(0.3);
+                  }
+                  20% {
+                    transform: scale(1.1);
+                  }
+                  40% {
+                    transform: scale(0.9);
+                  }
+                  60% {
+                    transform: scale(1.03);
+                  }
+                  80% {
+                    transform: scale(0.97);
+                  }
+                  to {
+                    transform: scale(1);
+                  }
+                }
+                .on {
+                  animation: on 1s;
+                  transform-origin: center;
+                }
+              </style>
+              <path class="${state}" d="M42.2 28.3c0-.8-.2-1-.2-1L26 12.1s-.5-.4-1-.4-1 .3-1 .3L8.2 27.1c-.4.5-.4.9-.4.9v18.3c0 1.1.9 2 1.9 2h8.2a1.47 1.47 0 0 0 1.5-1.5v-14a1.47 1.47 0 0 1 1.5-1.5h8.4a1.47 1.47 0 0 1 1.5 1.5v14a1.47 1.47 0 0 0 1.5 1.5h8.2c1.1 0 2-.9 2-1.9 0-.2-.3-18.1-.3-18.1zM7.3 25l-1.6 1.5s-.3.3-.5.3-.5 0-.8-.2c-.2-.2-2-2.8-2-2.8s-.1-.4-.1-.7c.1-.3.2-.7.3-.8.4-.1 21.5-20.1 21.5-20.1s.4-.3.9-.3c.4 0 .8.1.9.2s.5.4.5.4l8.9 8.5V6s.1-.4.2-.7c.1-.2.3-.3.4-.3s.3-.1.3-.1h3s.3.1.4.3a1.08 1.08 0 0 1 .3.7v9.8l7.2 6.9s.2.3.3.4c.1.2.1.7.1.7 0 .1-.1.4-.2.5s-1.6 2.5-1.6 2.5-.1.3-.3.3c-.2.1-.4.1-.7 0-.2-.1-.5-.4-.5-.4L26.4 9.4s-.3-.3-.5-.4-.4-.2-.8-.2-.5.1-.8.1c-.1.1-.4.3-.7.5C23.3 9.8 7.3 25 7.3 25z"/>
+            </svg>
+          `;
+        ]]]
+
+
+
+
+
+#################################################
+#                                               #
+#                   temperature                 #
+#                                               #
+#################################################
+
+  temperature:
+    template:
+      - base2
+    show_state: false
+    custom_fields:
+      circle: >
+        [[[ {
+          if (entity) {
+        const temperature = Math.floor(entity.state*10)/10;
+        return `<svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20.5" stroke="#313638" stroke-width="1.5" fill="#FFFFFF08" style="
+        transform: rotate(-90deg); transform-origin: 50% 50%;" />
+        <text x="50%" y="54%" fill="#8d8e90" font-size="11" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle" dominant-baseline="middle">${temperature}°C</text></svg>`; }} ]]]
+      graph:
+        card:
+          type: "custom:mini-graph-card"
+          line_color: "#3182b7"
+          line_width: 4
+          font_size: 75
+          hours_to_show: 24
+          show:
+            name: false
+            icon: false
+            state: false
+            legend: false
+            labels: false
+          color_thresholds:
+            - value: 20
+              color: "#26c941"
+            - value: 25
+              color: "#64c91c"
+            - value: 28
+              color: "#d4c11c"
+            - value: 30
+              color: "#d1861d"
+            - value: 32
+              color: "#de4314"
+            - value: 35
+              color: "#fa0505"
+            - value: 40
+              color: "#c92626"
+    styles:
+      name: [top: 57%, left: -1%, width: 100%, position: absolute]
+      custom_fields:
+        graph: [bottom: 0%, left: 0%, width: 100%, position: absolute]
+        circle:
+          - display: initial
+          - width: 90%
+          - letter-spacing: 0.03vw
+          - margin: -6% -6% 0 0
+          - justify-self: end
+          - opacity: 1
+        icon:
+          - width: 67%
+          - fill: "#9da0a2"
+
+  #################################################
+  #                                               #
+  #                   humidity                    #
+  #                                               #
+  #################################################
+
+  humidity:
+    template:
+      - base2
+    show_state: false
+    custom_fields:
+      circle: >
+        [[[ {
+          if (entity) {
+        const humidity = Math.round(entity.state);
+        return `<svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20.5" stroke="#313638" stroke-width="1.5" fill="#FFFFFF08" style="
+        transform: rotate(-90deg); transform-origin: 50% 50%;" />
+        <text x="50%" y="54%" fill="#8d8e90" font-size="14" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle" dominant-baseline="middle">${humidity}%</text></svg>`; }} ]]]
+      graph:
+        card:
+          type: "custom:mini-graph-card"
+          line_color: "#3182b7"
+          line_width: 4
+          font_size: 75
+          hours_to_show: 24
+          show:
+            name: false
+            icon: false
+            state: false
+            legend: false
+            labels: false
+          color_thresholds:
+            - value: 30
+              color: "#26c941"
+            - value: 35
+              color: "#64c91c"
+            - value: 38
+              color: "#d4c11c"
+            - value: 40
+              color: "#d1861d"
+            - value: 42
+              color: "#de4314"
+            - value: 55
+              color: "#fa0505"
+            - value: 60
+              color: "#c92626"
+    styles:
+      name: [top: 57%, left: -1%, width: 100%, position: absolute]
+      custom_fields:
+        graph: [bottom: 0%, left: 0%, width: 100%, position: absolute]
+        circle:
+          - display: initial
+          - width: 90%
+          - letter-spacing: 0.03vw
+          - margin: -6% -6% 0 0
+          - justify-self: end
+          - opacity: 1
+        icon:
+          - width: 67%
+          - fill: "#9da0a2"
+
+  icon_temperature:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 50 50">
+          <path d="M32.8 28.2V8.4A8.28 8.28 0 0 0 24.5.1a8.28 8.28 0 0 0-8.3 8.3v19.7c-2.5 2.3-4.1 5.6-4.1 9.3 0 6.9 5.6 12.4 12.4 12.4s12.4-5.6 12.4-12.4c0-3.7-1.6-7-4.1-9.2zm-8.3 17.5a8.28 8.28 0 0 1-8.3-8.3 8.2 8.2 0 0 1 2.8-6.2l1.4-1.2V8.4c0-2.3 1.9-4.1 4.1-4.1s4.1 1.9 4.1 4.1V30l1.4 1.2c1.7 1.6 2.8 3.8 2.8 6.2a8.28 8.28 0 0 1-8.3 8.3zm-2.1-29h4.1v24.8h-4.1V16.7zm2.1 14.5c3.4 0 6.2 2.8 6.2 6.2s-2.8 6.2-6.2 6.2-6.2-2.8-6.2-6.2 2.8-6.2 6.2-6.2z"/>
+        </svg>
+
+  icon_humidity:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 24 24">
+          <path d="M12,3.25C12,3.25 6,10 6,14C6,17.32 8.69,20 12,20A6,6 0 0,0 18,14C18,10 12,3.25 12,3.25M14.47,9.97L15.53,11.03L9.53,17.03L8.47,15.97M9.75,10A1.25,1.25 0 0,1 11,11.25A1.25,1.25 0 0,1 9.75,12.5A1.25,1.25 0 0,1 8.5,11.25A1.25,1.25 0 0,1 9.75,10M14.25,14.5A1.25,1.25 0 0,1 15.5,15.75A1.25,1.25 0 0,1 14.25,17A1.25,1.25 0 0,1 13,15.75A1.25,1.25 0 0,1 14.25,14.5Z"/>
+        </svg>
+  
+  icon_gs_battery:
+    custom_fields:
+      icon: > 
+        [[[
+          if(entity && entity.state && entity.attributes) {
+            const soc = Math.round(entity.state);
+            if(entity.attributes.isCharging) {
+              if(soc < 10) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M23.05,11H20.05V4L15.05,14H18.05V22M12,20H4L4.05,6H12.05M12.72,4H11.05V2H5.05V4H3.38A1.33,1.33 0 0,0 2.05,5.33V20.67C2.05,21.4 2.65,22 3.38,22H12.72C13.45,22 14.05,21.4 14.05,20.67V5.33A1.33,1.33 0 0,0 12.72,4Z" /></svg>'
+              }
+              if(soc < 20) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-10</title><path d="M23.05,11H20.05V4L15.05,14H18.05V22M12,18H4L4.05,6H12.05M12.72,4H11.05V2H5.05V4H3.38A1.33,1.33 0 0,0 2.05,5.33V20.67C2.05,21.4 2.65,22 3.38,22H12.72C13.45,22 14.05,21.4 14.05,20.67V5.33A1.33,1.33 0 0,0 12.72,4Z" /></svg>'
+              }
+              if(soc < 30) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-20</title><path d="M23.05,11H20.05V4L15.05,14H18.05V22M12.05,17H4.05V6H12.05M12.72,4H11.05V2H5.05V4H3.38A1.33,1.33 0 0,0 2.05,5.33V20.67C2.05,21.4 2.65,22 3.38,22H12.72C13.45,22 14.05,21.4 14.05,20.67V5.33A1.33,1.33 0 0,0 12.72,4Z" /></svg>'
+              }
+              if(soc < 40) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-30</title><path d="M12,15H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4M23,11H20V4L15,14H18V22L23,11Z" /></svg>'
+              }
+              if(soc < 50) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-40</title><path d="M13 4H11V2H5V4H3C2.4 4 2 4.4 2 5V21C2 21.6 2.4 22 3 22H13C13.6 22 14 21.6 14 21V5C14 4.4 13.6 4 13 4M12 14.5H4V6H12V14.5M23 11H20V4L15 14H18V22" /></svg>'
+              }
+              if(soc < 60) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-50</title><path d="M23,11H20V4L15,14H18V22M12,13H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4Z" /></svg>'
+              }
+              if(soc < 70) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-60</title><path d="M12,11H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4M23,11H20V4L15,14H18V22L23,11Z" /></svg>'
+              }
+              if(soc < 80) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-70</title><path d="M12,10H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4M23,11H20V4L15,14H18V22L23,11Z" /></svg>'
+              }
+              if(soc < 90) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-80</title><path d="M23,11H20V4L15,14H18V22M12,9H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4Z" /></svg>'
+              }
+              if(soc < 100) {
+                return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-90</title><path d="M23,11H20V4L15,14H18V22M12,8H4V6H12M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4Z" /></svg>'
+              }
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-charging-100</title><path d="M23,11H20V4L15,14H18V22M12.67,4H11V2H5V4H3.33A1.33,1.33 0 0,0 2,5.33V20.67C2,21.4 2.6,22 3.33,22H12.67C13.4,22 14,21.4 14,20.67V5.33A1.33,1.33 0 0,0 12.67,4Z" /></svg>'
+            }
+
+            if(soc < 10) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-alert-variant-outline</title><path d="M14 20H6V6H14M14.67 4H13V2H7V4H5.33C4.6 4 4 4.6 4 5.33V20.67C4 21.4 4.6 22 5.33 22H14.67C15.4 22 16 21.4 16 20.67V5.33C16 4.6 15.4 4 14.67 4M21 7H19V13H21V8M21 15H19V17H21V15Z" /></svg>'
+            }
+            if(soc < 20) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-10</title><path d="M16,18H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 30) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-20</title><path d="M16,17H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 40) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-30</title><path d="M16,15H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 50) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-40</title><path d="M16,14H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 60) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-50</title><path d="M16,13H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 70) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-60</title><path d="M16,12H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 80) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-70</title><path d="M16,10H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 90) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-80</title><path d="M16,9H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            if(soc < 100) {
+              return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery-90</title><path d="M16,8H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+            }
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery</title><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+          }
+          
+          return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><title>battery</title><path d="M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" /></svg>'
+        ]]]
+  
+
+  icon_smoke:
+    custom_fields: 
+      icon: >
+          [[[
+            if(entity && entity.state && entity.state=='on')
+            {
+              return '<svg t="1657621133307" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5463" width="70%" height="70%"><path d="M437.248 109.568zM409.6 129.024l10.752-3.072 17.408-4.096v-12.8zM119.296 602.112zM131.584 599.552l-12.288 3.072 27.648 44.544a391.68 391.68 0 0 1-15.36-47.616z" p-id="5464" fill="#3182b8"></path><path d="M904.192 592.384c0 7.68-3.584 15.36-5.632 23.552s-5.632 16.384-8.192 24.064l26.624-45.056z" p-id="5465" fill="#3182b8"></path><path d="M230.4 782.848a397.312 397.312 0 0 1-51.2-62.464 396.288 396.288 0 0 1-34.304-73.216 391.68 391.68 0 0 1-14.848-47.616l-12.288 3.072-12.288 3.072A423.936 423.936 0 0 0 230.4 819.2l18.944 16.896 16.384-16.896-17.92-15.872c-6.144-7.68-11.776-14.336-17.408-20.48zM175.616 312.832A391.168 391.168 0 0 1 409.6 129.024l10.752-3.072 17.408-4.096v-25.6L416.256 102.4a419.84 419.84 0 0 0-153.6 72.192 423.936 423.936 0 0 0-126.976 153.6l23.04 11.264c6.656-10.24 11.776-18.432 16.896-26.624z" p-id="5466" fill="#3182b8"></path><path d="M515.072 51.2a460.8 460.8 0 1 0 460.8 460.8 460.8 460.8 0 0 0-460.8-460.8zM287.232 204.8a377.856 377.856 0 0 1 136.192-62.464l16.384-3.584v22.528l-15.36 3.584-9.728 3.072A352.256 352.256 0 0 0 204.8 332.8c-4.608 7.68-9.216 14.848-12.8 23.04l-20.992-10.24A381.952 381.952 0 0 1 287.232 204.8z m-13.824 599.552L256 789.504a381.44 381.44 0 0 1-111.104-193.536h22.528a352.256 352.256 0 0 0 13.312 43.008 358.4 358.4 0 0 0 31.232 65.536 358.4 358.4 0 0 0 44.032 51.2c5.12 5.632 10.24 11.776 15.872 16.896l16.384 14.336z m212.992 11.264a298.496 298.496 0 0 1-159.232-64.512H486.4z m0-102.4H290.304a300.032 300.032 0 0 1-46.592-71.68H486.4z m0-105.472h-256a298.496 298.496 0 0 1-13.824-71.68H486.4z m112.128-467.456a381.44 381.44 0 0 1 256 197.12l7.168 15.36-20.992 9.728-7.168-14.336-5.12-8.704a351.744 351.744 0 0 0-209.408-169.472c-8.704-2.56-16.896-5.632-25.6-7.168z m-54.784 396.288h270.336a299.008 299.008 0 0 1-13.824 71.68h-256z m0 276.992v-62.464h159.232a298.496 298.496 0 0 1-159.232 64.512z m0-102.4v-71.68h243.2a300.032 300.032 0 0 1-46.592 71.68z m296.96-10.752a379.904 379.904 0 0 1-79.872 95.744l-14.848-17.408a350.72 350.72 0 0 0 31.744-31.744 358.4 358.4 0 0 0 41.472-54.784 358.4 358.4 0 0 0 29.184-65.536c0-7.168 5.632-14.336 7.68-22.016s3.584-13.824 5.12-20.992h22.528c0 7.68-3.584 14.848-5.12 22.528a382.976 382.976 0 0 1-37.888 97.792z" p-id="5467" fill="#3182b8"></path></svg>'
+            } else {
+              return '<svg t="1657690372968" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1823" width="70%" height="70%"><path d="M437.248 109.568zM409.6 129.024l10.752-3.072 17.408-4.096v-12.8zM119.296 602.112zM131.584 599.552l-12.288 3.072 27.648 44.544a391.68 391.68 0 0 1-15.36-47.616z" p-id="1824" fill="#9da0a2"></path><path d="M904.192 592.384c0 7.68-3.584 15.36-5.632 23.552s-5.632 16.384-8.192 24.064l26.624-45.056z" p-id="1825" fill="#9da0a2"></path><path d="M230.4 782.848a397.312 397.312 0 0 1-51.2-62.464 396.288 396.288 0 0 1-34.304-73.216 391.68 391.68 0 0 1-14.848-47.616l-12.288 3.072-12.288 3.072A423.936 423.936 0 0 0 230.4 819.2l18.944 16.896 16.384-16.896-17.92-15.872c-6.144-7.68-11.776-14.336-17.408-20.48zM175.616 312.832A391.168 391.168 0 0 1 409.6 129.024l10.752-3.072 17.408-4.096v-25.6L416.256 102.4a419.84 419.84 0 0 0-153.6 72.192 423.936 423.936 0 0 0-126.976 153.6l23.04 11.264c6.656-10.24 11.776-18.432 16.896-26.624z" p-id="1826" fill="#9da0a2"></path><path d="M515.072 51.2a460.8 460.8 0 1 0 460.8 460.8 460.8 460.8 0 0 0-460.8-460.8zM287.232 204.8a377.856 377.856 0 0 1 136.192-62.464l16.384-3.584v22.528l-15.36 3.584-9.728 3.072A352.256 352.256 0 0 0 204.8 332.8c-4.608 7.68-9.216 14.848-12.8 23.04l-20.992-10.24A381.952 381.952 0 0 1 287.232 204.8z m-13.824 599.552L256 789.504a381.44 381.44 0 0 1-111.104-193.536h22.528a352.256 352.256 0 0 0 13.312 43.008 358.4 358.4 0 0 0 31.232 65.536 358.4 358.4 0 0 0 44.032 51.2c5.12 5.632 10.24 11.776 15.872 16.896l16.384 14.336z m212.992 11.264a298.496 298.496 0 0 1-159.232-64.512H486.4z m0-102.4H290.304a300.032 300.032 0 0 1-46.592-71.68H486.4z m0-105.472h-256a298.496 298.496 0 0 1-13.824-71.68H486.4z m112.128-467.456a381.44 381.44 0 0 1 256 197.12l7.168 15.36-20.992 9.728-7.168-14.336-5.12-8.704a351.744 351.744 0 0 0-209.408-169.472c-8.704-2.56-16.896-5.632-25.6-7.168z m-54.784 396.288h270.336a299.008 299.008 0 0 1-13.824 71.68h-256z m0 276.992v-62.464h159.232a298.496 298.496 0 0 1-159.232 64.512z m0-102.4v-71.68h243.2a300.032 300.032 0 0 1-46.592 71.68z m296.96-10.752a379.904 379.904 0 0 1-79.872 95.744l-14.848-17.408a350.72 350.72 0 0 0 31.744-31.744 358.4 358.4 0 0 0 41.472-54.784 358.4 358.4 0 0 0 29.184-65.536c0-7.168 5.632-14.336 7.68-22.016s3.584-13.824 5.12-20.992h22.528c0 7.68-3.584 14.848-5.12 22.528a382.976 382.976 0 0 1-37.888 97.792z" p-id="1827" fill="#9da0a2"></path></svg>'
+            }
+          ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+  
+  icon_sos:
+    custom_fields: 
+      icon: >
+          [[[
+            return entity && entity.state && entity.state=='on'
+              ? '<svg t="1657621596674" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6159" width="80%" height="80%"><path d="M127.488 512c-37.44 0-67.84-28.416-67.84-63.36s30.4-63.424 67.84-63.424c27.712 0 52.224 15.552 62.784 39.616 6.912 15.936 24.384 22.72 38.912 15.168a32.832 32.832 0 0 0 14.016-42.24 126.016 126.016 0 0 0-115.776-76.032 126.848 126.848 0 0 0 0.384 253.696c37.824 0 68.288 28.672 68.288 63.808 0 35.008-30.528 63.616-68.288 63.616-28.032 0-52.8-15.744-63.36-39.936-6.784-16-24.384-22.784-38.912-15.36-14.72 7.424-20.928 26.432-14.08 42.24a126.528 126.528 0 0 0 116.352 76.544A127.232 127.232 0 0 0 127.488 512zM830.656 511.232c-36.992 0-67.136-28.352-67.136-63.168 0-34.752 30.144-63.104 67.136-63.104 27.584 0 52.032 15.488 62.464 39.488 6.784 15.808 24.192 22.656 38.656 15.104 14.592-7.424 20.672-26.304 13.824-42.176a125.184 125.184 0 0 0-114.88-75.712c-69.12 0-125.248 56.768-125.248 126.4 0 69.76 56.128 126.336 125.824 126.336 37.44 0 67.776 28.544 67.776 63.424 0 35.008-30.336 63.424-67.776 63.424-27.776 0-52.416-15.616-62.784-39.808-6.912-15.808-24.128-22.592-38.72-15.168-14.528 7.36-20.672 26.24-13.888 41.984a125.632 125.632 0 0 0 115.456 76.224 126.464 126.464 0 0 0 125.952-126.656 126.848 126.848 0 0 0-126.656-126.592zM481.856 321.664h-4.736c-64.256 0-156.416 51.584-156.416 114.88v214.592c0 63.424 92.16 114.944 156.416 114.944h4.736c64.32 0 156.416-51.52 156.416-114.944V436.544c0.064-63.296-92.096-114.88-156.416-114.88z m96.384 315.328c0 39.424-57.28 71.488-97.28 71.488h-3.008c-39.936 0-97.344-32.064-97.344-71.488V451.52c0-39.36 57.408-71.488 97.344-71.488h3.008c40 0 97.28 32.128 97.28 71.488v185.472z" fill="#3081b7" p-id="6160"></path></svg>'
+              : '<svg t="1657622094166" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6523" width="80%" height="80%"><path d="M127.488 512c-37.44 0-67.84-28.416-67.84-63.36s30.4-63.424 67.84-63.424c27.712 0 52.224 15.552 62.784 39.616 6.912 15.936 24.384 22.72 38.912 15.168a32.832 32.832 0 0 0 14.016-42.24 126.016 126.016 0 0 0-115.776-76.032 126.848 126.848 0 0 0 0.384 253.696c37.824 0 68.288 28.672 68.288 63.808 0 35.008-30.528 63.616-68.288 63.616-28.032 0-52.8-15.744-63.36-39.936-6.784-16-24.384-22.784-38.912-15.36-14.72 7.424-20.928 26.432-14.08 42.24a126.528 126.528 0 0 0 116.352 76.544A127.232 127.232 0 0 0 127.488 512zM830.656 511.232c-36.992 0-67.136-28.352-67.136-63.168 0-34.752 30.144-63.104 67.136-63.104 27.584 0 52.032 15.488 62.464 39.488 6.784 15.808 24.192 22.656 38.656 15.104 14.592-7.424 20.672-26.304 13.824-42.176a125.184 125.184 0 0 0-114.88-75.712c-69.12 0-125.248 56.768-125.248 126.4 0 69.76 56.128 126.336 125.824 126.336 37.44 0 67.776 28.544 67.776 63.424 0 35.008-30.336 63.424-67.776 63.424-27.776 0-52.416-15.616-62.784-39.808-6.912-15.808-24.128-22.592-38.72-15.168-14.528 7.36-20.672 26.24-13.888 41.984a125.632 125.632 0 0 0 115.456 76.224 126.464 126.464 0 0 0 125.952-126.656 126.848 126.848 0 0 0-126.656-126.592zM481.856 321.664h-4.736c-64.256 0-156.416 51.584-156.416 114.88v214.592c0 63.424 92.16 114.944 156.416 114.944h4.736c64.32 0 156.416-51.52 156.416-114.944V436.544c0.064-63.296-92.096-114.88-156.416-114.88z m96.384 315.328c0 39.424-57.28 71.488-97.28 71.488h-3.008c-39.936 0-97.344-32.064-97.344-71.488V451.52c0-39.36 57.408-71.488 97.344-71.488h3.008c40 0 97.28 32.128 97.28 71.488v185.472z" fill="#9da0a2" p-id="6524"></path></svg>';
+          ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+
+  icon_webcam:
+    custom_fields:
+      icon: >
+        [[[ const state = (entity && entity.state === 'idle') ? 'animate' : null;
+        return `<svg viewBox="0 0 24 24"><style>@keyframes animate{0%{transform: scale(0.85);}20%{transform: scale(1.1);}40%{transform: scale(0.95);}60%{transform: scale(1.03);}80%{transform: scale(0.97);}100%{transform: scale(1);}}.animate{animation: animate 0.8s; transform-origin: center;}</style>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#9DA0A2" d="M12,2A7,7 0 0,1 19,9A7,7 0 0,1 12,16A7,7 0 0,1 5,9A7,7 0 0,1 12,2M12,4A5,5 0 0,0 7,9A5,5 0 0,0 12,14A5,5 0 0,0 17,9A5,5 0 0,0 12,4M12,6A3,3 0 0,1 15,9A3,3 0 0,1 12,12A3,3 0 0,1 9,9A3,3 0 0,1 12,6M6,22A2,2 0 0,1 4,20C4,19.62 4.1,19.27 4.29,18.97L6.11,15.81C7.69,17.17 9.75,18 12,18C14.25,18 16.31,17.17 17.89,15.81L19.71,18.97C19.9,19.27 20,19.62 20,20A2,2 0 0,1 18,22H6Z" /></svg>
+        <path class="${state}" fill="#57A8D7" d="m 12,6 c 1.656854,0 3,1.3431458 3,3 0,1.656854 -1.343146,3 -3,3 C 10.343146,12 9,10.656854 9,9 9,7.3431458 10.343146,6 12,6"/></svg>`; ]]]
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+
+  icon_motion:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 24 24"><path d="M10,0.2C9,0.2 8.2,1 8.2,2C8.2,3 9,3.8 10,3.8C11,3.8 11.8,3 11.8,2C11.8,1 11,0.2 10,0.2M15.67,1A7.33,7.33 0 0,0 23,8.33V7A6,6 0 0,1 17,1H15.67M18.33,1C18.33,3.58 20.42,5.67 23,5.67V4.33C21.16,4.33 19.67,2.84 19.67,1H18.33M21,1A2,2 0 0,0 23,3V1H21M7.92,4.03C7.75,4.03 7.58,4.06 7.42,4.11L2,5.8V11H3.8V7.33L5.91,6.67L2,22H3.8L6.67,13.89L9,17V22H10.8V15.59L8.31,11.05L9.04,8.18L10.12,10H15V8.2H11.38L9.38,4.87C9.08,4.37 8.54,4.03 7.92,4.03Z" fill="var(--button-card-light-color-no-temperature)"/></svg>
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+
+  icon_fire:
+    custom_fields:
+      icon: >
+        <svg viewBox="0 0 24 24"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2M14.5 17.5C14.22 17.74 13.76 18 13.4 18.1C12.28 18.5 11.16 17.94 10.5 17.28C11.69 17 12.4 16.12 12.61 15.23C12.78 14.43 12.46 13.77 12.33 13C12.21 12.26 12.23 11.63 12.5 10.94C12.69 11.32 12.89 11.7 13.13 12C13.9 13 15.11 13.44 15.37 14.8C15.41 14.94 15.43 15.08 15.43 15.23C15.46 16.05 15.1 16.95 14.5 17.5H14.5Z" fill="var(--button-card-light-color-no-temperature)"/></svg>
+    styles:
+      custom_fields:
+        icon:
+          - width: 77%
+          - margin-left: -14%
+          - margin-top: 1%
+
+#################################################
+#                                               #
+#                   BATTERY                     #
+#                                               #
+#################################################
+
+  gs_battery:
+    template:
+      - humidity
+    custom_fields:
+      circle: >
+        [[[ {
+          if (entity) {
+        const soc = Math.round(entity.state);
+        return `<svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20.5" stroke="#313638" stroke-width="1.5" fill="#FFFFFF08" style="
+        transform: rotate(-90deg); transform-origin: 50% 50%;" />
+        <text x="50%" y="54%" fill="#8d8e90" font-size="14" text-anchor="middle" alignment-baseline="middle" dominant-baseline="middle" dominant-baseline="middle">${soc}%</text></svg>`; }} ]]]

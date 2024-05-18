@@ -1,0 +1,55 @@
+action: '[[[ return  !entity ? "fire-dom-event" : "toggle" ]]]'
+browser_mod:
+  command: popup
+  title: Bind Device
+  style:
+    hui-vertical-stack-card:
+      $hui-history-graph-card$ : |
+        .content {
+          padding: 0.2em 1.7em 1.2em 1.7em !important;
+        }
+      $: |
+        button-card {
+          align-self: center;
+          padding: 0.2em 0 2.3em 0;
+        }
+      $hui-markdown-card: 
+        $: |
+          ha-markdown{
+            font-size:16px!important
+          }
+  card:
+    type: vertical-stack
+    cards:
+      - type: markdown
+        content: '[[[return variables.tip_content + variables.device_id]]]'
+
+      - type: custom:button-card
+        name: ' '
+        custom_fields:
+          right: >
+            <img src="/local/mattias/right.svg" width="100%">
+          wrong: >
+            <img src="/local/mattias/wrong.svg" width="100%">
+        styles:
+          custom_fields:
+            right:
+              - display: none
+              - width: 20%
+              - position: absolute
+              - opacity: 0.9
+              - right: 40%
+              - top: -6%
+            wrong:
+              - display: none
+              - width: 20%
+              - position: absolute
+              - opacity: 0.9
+              - right: 40%
+              - top: 1%
+        variables: 
+          device_id: '[[[return variables.device_id]]]'
+          tip_content: '[[[return variables.device_id]]]'
+   
+         
+          
